@@ -1,0 +1,16 @@
+# Virtual Environments
+.venv/
+venv/
+run_env/
+
+# IDEs and Editors
+.vscode/
+.specstory/
+
+# Data
+data/
+*.csv
+
+# Python
+__pycache__/
+*.pyc

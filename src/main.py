@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # Educational Inequality in Algorithmic Project Assignment
 # Final Fairness Analysis Pipeline: Causal-style checks, reweighting, subgroup fairness,
 # robustness analysis, and enhanced tradeoff reporting
@@ -46,7 +46,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 
-import fairness_core as base
+import core as base
 
 
 PROJECT_ROOT = base.PROJECT_ROOT
@@ -224,8 +224,8 @@ def fit_models(x_train: np.ndarray, y_train: np.ndarray, sample_weight: np.ndarr
     models = {
         "Logistic Regression": LogisticRegression(max_iter=2000, class_weight="balanced", random_state=RANDOM_STATE),
         "Reweighted Logistic": LogisticRegression(max_iter=2000, class_weight=None, random_state=RANDOM_STATE),
-        "Random Forest": RandomForestClassifier(n_estimators=120, class_weight="balanced_subsample", random_state=RANDOM_STATE, n_jobs=-1),
-        "Neural Network": MLPClassifier(hidden_layer_sizes=(48, 24), alpha=0.001, max_iter=160, random_state=RANDOM_STATE),
+        "Random Forest": RandomForestClassifier(n_estimators=500, class_weight="balanced_subsample", random_state=RANDOM_STATE, n_jobs=-1),
+        "Neural Network": MLPClassifier(hidden_layer_sizes=(64, 32), alpha=0.001, max_iter=800, random_state=RANDOM_STATE),
         "Weighted XGB": base.xgb.XGBClassifier(
             max_depth=5,
             learning_rate=0.08,
@@ -584,7 +584,7 @@ def evaluate_bundle(bundle: base.DatasetBundle) -> DatasetStudy:
         negative = float(np.sum(y_train == 0))
         scale_pos_weight = max(negative / max(positive, 1.0), 1.0)
         # Increase budget for a better search (may be slower)
-        hpo_budget = 24
+        hpo_budget = 150
         best_params, history = base.bayesian_optimize_xgb(x_train, y_train, s_train, scale_pos_weight, budget=hpo_budget)
         tuned_xgb = base.build_xgb_model(best_params, scale_pos_weight)
         try:
@@ -702,10 +702,12 @@ def main() -> None:
 
     studies = [evaluate_bundle(bundle) for bundle in bundles]
     summary = summarize(studies)
-    summary.to_csv(DOCS_DIR / "final_metrics_summary.csv", index=False)
+    summary.to_csv(DOCS_DIR / "metrics_summary.csv", index=False)
 
     for study in studies:
-        plot_pareto(study.results, PLOTS_DIR / f"{study.bundle.name.lower().replace(' ', '_')}_pareto_final.png", f"Final Evaluation Pareto Frontier - {study.bundle.name}")
+        name_map = {"Delhivery Logistics": "delhivery", "Adult Income Benchmark": "adult", "Amazon Last-Mile Routes": "amazon"}
+        short_name = name_map.get(study.bundle.name, study.bundle.name.lower().replace(' ', '_'))
+        plot_pareto(study.results, PLOTS_DIR / f"{short_name}_pareto.png", f"Final Evaluation Pareto Frontier - {study.bundle.name}")
         if study.best_result.y_prob is not None:
             sns.set_theme(style="whitegrid")
             plt.figure(figsize=(10, 6))
@@ -716,16 +718,16 @@ def main() -> None:
             plt.xlabel("Fairness Gap")
             plt.ylabel("Accuracy")
             plt.tight_layout()
-            plt.savefig(PLOTS_DIR / f"{study.bundle.name.lower().replace(' ', '_')}_tradeoff_final.png", dpi=300)
+            plt.savefig(PLOTS_DIR / f"{short_name}_tradeoff.png", dpi=300)
             plt.close()
 
-    write_report(studies, DOCS_DIR / "TECHNICAL_APPENDIX.md")
-    causal_graph_markdown(DOCS_DIR / "Causal_Graph_Appendix.md")
+    write_report(studies, DOCS_DIR / "technical_appendix.md")
+    causal_graph_markdown(DOCS_DIR / "causal_graph.md")
 
     print("Final Evaluation complete")
-    print(f"Report: {DOCS_DIR / 'TECHNICAL_APPENDIX.md'}")
-    print(f"Metrics: {DOCS_DIR / 'final_metrics_summary.csv'}")
-    print(f"Causal graph appendix: {DOCS_DIR / 'Causal_Graph_Appendix.md'}")
+    print(f"Report: {DOCS_DIR / 'technical_appendix.md'}")
+    print(f"Metrics: {DOCS_DIR / 'metrics_summary.csv'}")
+    print(f"Causal graph appendix: {DOCS_DIR / 'causal_graph.md'}")
 
 
 if __name__ == "__main__":

@@ -20,13 +20,13 @@ Evaluated on multiple logistics and benchmark datasets. The results demonstrate 
 | Model | Accuracy | Fairness Gap | Predictive Parity Diff | DI Ratio |
 | :--- | :---: | :---: | :---: | :---: |
 | **Logistic Regression (Baseline)** | 0.723 | 0.076 | 0.015 | 0.710 |
-| **Tuned XGB (HPO) (Proposed)** | 0.975 | 0.020 | 0.022 | 0.770 |
+| **Tuned XGB (HPO) (Proposed)** | 0.976 | 0.025 | 0.036 | 0.788 |
 
 ### Amazon Last-Mile Routes
 | Model | Accuracy | Fairness Gap | Predictive Parity Diff | DI Ratio |
 | :--- | :---: | :---: | :---: | :---: |
 | **Logistic Regression (Baseline)** | 0.628 | 0.069 | 0.026 | 0.819 |
-| **Tuned XGB (HPO) (Proposed)** | 0.654 | 0.090 | 0.077 | 0.774 |
+| **Tuned XGB (HPO) (Proposed)** | 0.663 | 0.115 | 0.089 | 0.718 |
 
 *Note: The best-performing model across composite fairness and accuracy metrics was the Tuned XGBoost model via Gaussian Process Surrogates.*
 

@@ -572,9 +572,9 @@ def vector_to_xgb_params(vector: Sequence[float]) -> Dict[str, float]:
 
 def sample_random_xgb_params(rng: np.random.Generator) -> Dict[str, float]:
     return {
-        "max_depth": int(rng.integers(3, 9)),
+        "max_depth": int(rng.integers(3, 12)),
         "learning_rate": float(rng.uniform(0.02, 0.18)),
-        "n_estimators": int(rng.integers(140, 360)),
+        "n_estimators": int(rng.integers(100, 1000)),
         "subsample": float(rng.uniform(0.65, 1.0)),
         "colsample_bytree": float(rng.uniform(0.65, 1.0)),
         "min_child_weight": int(rng.integers(1, 8)),

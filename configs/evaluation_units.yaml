@@ -1,0 +1,281 @@
+# ============================================================================
+# Declarative Evaluation Unit & Estimand Contracts (Pass 9 Release-Candidate)
+# Formally establishes the natural statistical / business decision unit
+# and evaluation estimand for each supported dataset, explicitly distinguishing:
+#   1. OBSERVATIONAL RECORD (raw data row: waypoint segment, survey record, manifest)
+#   2. EVALUATION DECISION UNIT (decision level: trip, route, individual, worker)
+#   3. FAIRNESS GROUP (demographic / sensitive attribute proxy grouping definition)
+#   4. CLUSTER / DEPENDENCE UNIT (sampling unit for dependence: trip_uuid, station_code)
+#   5. STATISTICAL ESTIMAND (target population parameter, weighting rule, fairness metric)
+# ============================================================================
+
+version: "2.0.0"
+governance_standard: "PASS_9_RELEASE_CANDIDATE"
+
+# Explicit separation of foundational evaluation concepts
+conceptual_definitions:
+  observational_record:
+    description: "The indivisible unit of data recording or measurement in the raw data store."
+    examples: ["waypoint_segment", "route_manifest_row", "census_survey_row"]
+  evaluation_decision_unit:
+    description: "The operational entity or decision level to which predictions and interventions apply."
+    examples: ["trip", "route", "individual_applicant", "worker"]
+  fairness_group:
+    description: "The demographic, proxy, or intersectional partition across which parity is evaluated."
+    examples: ["Education_Level", "Sex", "station_code_cluster"]
+  cluster_dependence_unit:
+    description: "The grouping entity whose observations share stochastic dependence and must be resampled intact."
+    examples: ["trip_uuid", "station_code", "household_id"]
+  statistical_estimand:
+    description: "The formal population parameter being estimated, including weighting and target definitions."
+    examples: ["Trip-weighted probability of deadline breach", "Individual survey income rate"]
+
+# Registry of aggregation semantics distinguishing target from prediction operators
+aggregation_semantics_registry:
+  ANY_FAILURE:
+    strategy_name: "ANY_FAILURE"
+    mathematical_definition: "y_agg = 1 if all(y_i == 1) else 0 (product of binary indicators)"
+    semantic_description: "Fails the entire entity if any single constituent observation fails (e.g. delivery cutoff breached)."
+    applicable_target_types: ["BINARY_CLASSIFICATION", "STOCHASTIC_EVENTS"]
+    applicable_prediction_types: ["BINARY_HARD_PREDICTION", "THRESHOLDED_DECISION"]
+    known_limitations: "Sensitive to entity length: longer entities with more segments have mechanically higher risk of any failure."
+    recommended_target_operator: "min(y_i) / all(y_i == 1)"
+    recommended_prediction_operator: "all(y_hat_i == 1)"
+
+  ALL_SUCCESS:
+    strategy_name: "ALL_SUCCESS"
+    mathematical_definition: "y_agg = 1 if any(y_i == 1) else 0 (maximum of binary indicators)"
+    semantic_description: "Succeeds if any constituent observation succeeds (e.g. redundant carrier or multi-attempt delivery)."
+    applicable_target_types: ["BINARY_CLASSIFICATION"]
+    applicable_prediction_types: ["BINARY_HARD_PREDICTION"]
+    known_limitations: "Mechanically inflates success rates for entities with many attempts or sub-segments."
+    recommended_target_operator: "max(y_i) / any(y_i == 1)"
+    recommended_prediction_operator: "any(y_hat_i == 1)"
+
+  MAJORITY_VOTE:
+    strategy_name: "MAJORITY_VOTE"
+    mathematical_definition: "y_agg = 1 if mean(y_i) > 0.50 else 0"
+    semantic_description: "Assigns entity label based on majority consensus among constituent observations."
+    applicable_target_types: ["BINARY_CLASSIFICATION", "MULTI_ANNOTATOR"]
+    applicable_prediction_types: ["BINARY_HARD_PREDICTION", "ENSEMBLE_ENSEMBLE"]
+    known_limitations: "Ignores severity of individual segment failures; ties require deterministic arbitration."
+    recommended_target_operator: "mean(y_i) > 0.50"
+    recommended_prediction_operator: "mean(y_hat_i) > 0.50"
+
+  FIRST_RECORD:
+    strategy_name: "FIRST_RECORD"
+    mathematical_definition: "y_agg = y_1 (chronologically earliest or first recorded observation)"
+    semantic_description: "Selects earliest recorded observation as representative of entity state."
+    applicable_target_types: ["LONGITUDINAL", "TEMPORAL_SEQUENCE"]
+    applicable_prediction_types: ["INTAKE_PREDICTION", "BASELINE_SCORE"]
+    known_limitations: "Discards subsequent intra-entity transitions, adaptations, and outcome changes."
+    recommended_target_operator: "y[0]"
+    recommended_prediction_operator: "y_hat[0]"
+
+  LAST_RECORD:
+    strategy_name: "LAST_RECORD"
+    mathematical_definition: "y_agg = y_T (chronologically latest or terminal observation)"
+    semantic_description: "Selects terminal observation as representative of entity final state."
+    applicable_target_types: ["LONGITUDINAL", "TERMINAL_OUTCOME"]
+    applicable_prediction_types: ["FINAL_DISPATCH_SCORE"]
+    known_limitations: "May introduce survivorship bias if attrition occurs before final observation."
+    recommended_target_operator: "y[-1]"
+    recommended_prediction_operator: "y_hat[-1]"
+
+  ENTITY_WEIGHTED:
+    strategy_name: "ENTITY_WEIGHTED"
+    mathematical_definition: "w_i = (1 / n_entity_i) * (N_total / N_unique_entities)"
+    semantic_description: "Inverse-frequency observation weighting ensuring each unique entity contributes equal aggregate weight."
+    applicable_target_types: ["ALL_TYPES", "BINARY_CLASSIFICATION", "REGRESSION"]
+    applicable_prediction_types: ["ALL_TYPES", "CONTINUOUS_PROBABILITY", "BINARY_HARD_PREDICTION"]
+    known_limitations: "Does not collapse rows into single decisions; standard errors require cluster-aware estimation."
+    recommended_target_operator: "weighted_mean"
+    recommended_prediction_operator: "weighted_mean"
+
+  NONE:
+    strategy_name: "NONE"
+    mathematical_definition: "y_agg = y (identity mapping)"
+    semantic_description: "No aggregation performed. Preserves raw row-level records under i.i.d. assumption."
+    applicable_target_types: ["IID_RECORDS", "CROSS_SECTIONAL_SURVEY"]
+    applicable_prediction_types: ["ROW_PREDICTION"]
+    known_limitations: "Invalid if rows exhibit intra-entity correlation or clustering."
+    recommended_target_operator: "identity"
+    recommended_prediction_operator: "identity"
+
+  UNSUPPORTED_EVALUATION_AGGREGATION:
+    strategy_name: "UNSUPPORTED_EVALUATION_AGGREGATION"
+    mathematical_definition: "Refusal to aggregate"
+    semantic_description: "Explicit refusal when target semantics or data structure do not justify heuristic aggregation."
+    applicable_target_types: []
+    applicable_prediction_types: []
+    known_limitations: "Blocks evaluation until user explicitly configures domain-justified aggregation."
+    recommended_target_operator: "raise ValueError"
+    recommended_prediction_operator: "raise ValueError"
+
+evaluation_units:
+  delhivery_logistics:
+    dataset_name: "Delhivery Logistics"
+    natural_decision_unit: "TRIP_LEVEL"
+    raw_record_unit: "SEGMENT_LEVEL"
+    evaluation_unit_key: "trip_uuid"
+    group_key: "trip_uuid"
+    cluster_key: "trip_uuid"
+    timestamp_key: "trip_creation_time"
+    repeated_measurements_per_entity: true
+    default_aggregation_strategy: "ANY_FAILURE"
+    default_target_aggregation_strategy: "ANY_FAILURE"
+    default_prediction_aggregation_strategy: "ANY_FAILURE"
+    supported_aggregation_strategies:
+      - "ANY_FAILURE"
+      - "MAJORITY_VOTE"
+      - "ALL_SUCCESS"
+      - "ENTITY_WEIGHTED_AVERAGE"
+      - "ENTITY_WEIGHTED"
+      - "SEGMENT_LEVEL_UNAGGREGATED"
+    statistical_estimand:
+      population: "Inter-city freight and delivery trips dispatched in India operational network"
+      decision_unit: "TRIP_LEVEL"
+      observation_unit: "WAYPOINT_SEGMENT"
+      weighting_rule: "EQUAL_TRIP_WEIGHT"
+      target_quantity: "PROBABILITY_OF_ON_TIME_COMPLETION"
+      fairness_quantity: "EQUALIZED_ODDS_ACROSS_SENSITIVE_GROUPS"
+      bootstrap_unit: "TRIP_CLUSTER"
+      grouping_definition: "Education_Level (constructed operational complexity proxy)"
+      estimand_status: "SPECIFIED"
+    concept_mapping:
+      observational_record: "WAYPOINT_SEGMENT"
+      evaluation_decision_unit: "TRIP_LEVEL"
+      fairness_group: "Education_Level"
+      cluster_dependence_unit: "trip_uuid"
+      statistical_estimand: "Trip-weighted equalized odds under binary cutoff deadline"
+    historical_unit_mismatch:
+      historical_evaluated_unit: "SEGMENT_LEVEL"
+      mismatch_description: "Pass 1-7 canonical benchmarks evaluated rows (waypoint segments) rather than trips, weighting multi-segment trips more heavily than single-segment trips."
+      preservation_policy: "Historical row-level numbers preserved under SEGMENT_LEVEL_UNAGGREGATED configuration; new benchmarks evaluate TRIP_LEVEL."
+      comparison_validity: "LEGACY_NONCOMPARABLE"
+
+  amazon_last_mile:
+    dataset_name: "Amazon Last-Mile Routes"
+    natural_decision_unit: "ROUTE_LEVEL"
+    raw_record_unit: "ROUTE_LEVEL"
+    evaluation_unit_key: "route_id"
+    group_key: "station_code"
+    cluster_key: "station_code"
+    timestamp_key: "departure_hour"
+    repeated_measurements_per_entity: false
+    default_aggregation_strategy: "NONE"
+    default_target_aggregation_strategy: "NONE"
+    default_prediction_aggregation_strategy: "NONE"
+    supported_aggregation_strategies:
+      - "NONE"
+      - "ENTITY_WEIGHTED"
+    semantic_validation_status: "PENDING_RAW_DATA_VERIFICATION"
+    raw_data_availability: "UNAVAILABLE_RESTRICTED_RESEARCH_LICENSE"
+    identifier_roles:
+      route_id:
+        semantic_role: "route identity"
+        description: "Unique delivery route manifest identifier."
+      station_code:
+        semantic_role: "facility/domain"
+        description: "Delivery station facility code representing dispatch region / operational cluster."
+      departure_hour:
+        semantic_role: "temporal grouping"
+        description: "Scheduled dispatch departure hour."
+    statistical_estimand:
+      population: "Urban and suburban last-mile delivery routes in Amazon Routing Challenge"
+      decision_unit: "ROUTE_LEVEL"
+      observation_unit: "ROUTE_MANIFEST"
+      weighting_rule: "EQUAL_ROUTE_WEIGHT"
+      target_quantity: "PROBABILITY_OF_HIGH_SCORE"
+      fairness_quantity: "EQUALIZED_ERROR_RATES_ACROSS_STATIONS"
+      bootstrap_unit: "STATION_CLUSTER"
+      grouping_definition: "station_code (operational facility proxy)"
+      estimand_status: "SPECIFIED"
+    concept_mapping:
+      observational_record: "ROUTE_MANIFEST"
+      evaluation_decision_unit: "ROUTE_LEVEL"
+      fairness_group: "station_code"
+      cluster_dependence_unit: "station_code"
+      statistical_estimand: "Route-weighted error rate parity across dispatch station facilities"
+    historical_unit_mismatch:
+      historical_evaluated_unit: "ROUTE_LEVEL"
+      mismatch_description: "None. Rows in canonical Amazon benchmark correspond 1-to-1 with route manifests."
+      preservation_policy: "Evaluated at ROUTE_LEVEL with station_code as cluster/group key."
+      comparison_validity: "CANONICAL_COMPARABLE"
+
+  adult_income:
+    dataset_name: "Adult Income Benchmark"
+    natural_decision_unit: "INDIVIDUAL_LEVEL"
+    raw_record_unit: "INDIVIDUAL_LEVEL"
+    evaluation_unit_key: null
+    group_key: null
+    cluster_key: null
+    timestamp_key: null
+    repeated_measurements_per_entity: false
+    default_aggregation_strategy: "NONE"
+    default_target_aggregation_strategy: "NONE"
+    default_prediction_aggregation_strategy: "NONE"
+    supported_aggregation_strategies:
+      - "NONE"
+    semantic_description: "individual census record / income classification"
+    statistical_estimand:
+      population: "Non-institutional civilian working-age individuals in US 1994 Current Population Survey"
+      decision_unit: "INDIVIDUAL_LEVEL"
+      observation_unit: "INDIVIDUAL_RECORD"
+      weighting_rule: "UNWEIGHTED_SAMPLE"
+      target_quantity: "PROBABILITY_OF_ANNUAL_INCOME_OVER_50K"
+      fairness_quantity: "DEMOGRAPHIC_PARITY_AND_EQUAL_OPPORTUNITY"
+      bootstrap_unit: "INDIVIDUAL_RECORD"
+      grouping_definition: "Real observed demographic attributes (Sex, Race, Education_Group)"
+      estimand_status: "SPECIFIED"
+    concept_mapping:
+      observational_record: "INDIVIDUAL_RECORD"
+      evaluation_decision_unit: "INDIVIDUAL_LEVEL"
+      fairness_group: "Sex / Race / Education_Group"
+      cluster_dependence_unit: null
+      statistical_estimand: "Census survey population probability of annual income exceeding $50,000"
+    historical_unit_mismatch:
+      historical_evaluated_unit: "INDIVIDUAL_LEVEL"
+      mismatch_description: "None. Rows in Adult Census benchmark correspond to individual survey respondents."
+      preservation_policy: "Evaluated at INDIVIDUAL_LEVEL under i.i.d. assumption."
+      comparison_validity: "CANONICAL_COMPARABLE"
+
+  synthetic_logistics:
+    dataset_name: "Synthetic Logistics Benchmark"
+    natural_decision_unit: "TRIP_LEVEL"
+    raw_record_unit: "SEGMENT_LEVEL"
+    evaluation_unit_key: "trip_uuid"
+    group_key: "trip_uuid"
+    cluster_key: "trip_uuid"
+    timestamp_key: "trip_creation_time"
+    repeated_measurements_per_entity: true
+    default_aggregation_strategy: "ANY_FAILURE"
+    default_target_aggregation_strategy: "ANY_FAILURE"
+    default_prediction_aggregation_strategy: "ANY_FAILURE"
+    supported_aggregation_strategies:
+      - "ANY_FAILURE"
+      - "MAJORITY_VOTE"
+      - "ENTITY_WEIGHTED_AVERAGE"
+      - "ENTITY_WEIGHTED"
+      - "SEGMENT_LEVEL_UNAGGREGATED"
+    statistical_estimand:
+      population: "Simulated fleet logistics trips under controlled mathematical DGP"
+      decision_unit: "TRIP_LEVEL"
+      observation_unit: "WAYPOINT_SEGMENT"
+      weighting_rule: "EQUAL_TRIP_WEIGHT"
+      target_quantity: "PROBABILITY_OF_DELIVERY_SUCCESS"
+      fairness_quantity: "EQUALIZED_ODDS_AND_DEMOGRAPHIC_PARITY"
+      bootstrap_unit: "TRIP_CLUSTER"
+      grouping_definition: "Complexity_Tier (synthetic tier assignment)"
+      estimand_status: "SPECIFIED"
+    concept_mapping:
+      observational_record: "WAYPOINT_SEGMENT"
+      evaluation_decision_unit: "TRIP_LEVEL"
+      fairness_group: "Complexity_Tier"
+      cluster_dependence_unit: "trip_uuid"
+      statistical_estimand: "Trip-weighted parity across synthetic complexity tiers under structural logistic DGP"
+    historical_unit_mismatch:
+      historical_evaluated_unit: "SEGMENT_LEVEL"
+      mismatch_description: "Synthetic DGP generates multiple segment rows per trip_uuid; canonical benchmark evaluated row-level predictions."
+      preservation_policy: "Historical numbers preserved as SEGMENT_LEVEL_UNAGGREGATED; TRIP_LEVEL supported via entity aggregation and entity-weighted metrics."
+      comparison_validity: "LEGACY_NONCOMPARABLE"

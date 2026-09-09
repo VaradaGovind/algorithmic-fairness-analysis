@@ -1,0 +1,117 @@
+# ============================================================================
+# Canonical Benchmark Configuration
+# Defines the canonical evaluation parameters, baseline hierarchy, and seeds.
+# ============================================================================
+
+benchmark_meta:
+  experiment_type: "CANONICAL"
+  version: "1.1.0"
+  framework_status: "METHODOLOGICALLY_AUDITED"
+  date: "2026-09-08"
+  firewall_enabled: true
+  split_hierarchy: "Train (60%) -> Validation (20%) -> Locked Test (20%)"
+  prespecification_status: "Canonical scenario designation is current configuration, not independently verified pre-registration."
+  frozen_canonical_scenario: "SCENARIO_C_EXPLICIT_GROUP_EFFECT"
+  frozen_signal_regime: "MODERATE_SIGNAL"
+  frozen_policy: "Standard_Operational_Policy"
+
+random_seeds:
+  canonical_seeds: [42, 43, 44, 45, 46]
+  primary_seed: 42
+
+baseline_hierarchy:
+  B0:
+    name: "B0_Majority_Class_Baseline"
+    model: "MajorityClassClassifier"
+    weights: "None"
+    features: "None"
+    description: "Trivial majority-class predictor (training mode). Negative control establishing minimum baseline utility."
+  B1:
+    name: "B1_Clean_Unmitigated_Linear"
+    model: "LogisticRegression"
+    weights: "None"
+    features: "pre_dispatch_valid_only"
+    description: "Standard clean linear classifier restricted strictly to pre-dispatch valid features (zero leakage)."
+  B2:
+    name: "B2_Fairness_Reweighted"
+    model: "Reweighted_LogisticRegression"
+    weights: "inverse_propensity_reweighing"
+    features: "pre_dispatch_valid_only"
+    description: "Pre-processing instance reweighting to balance joint sensitive-target frequencies."
+  B3:
+    name: "B3_Validation_Threshold_Mitigated"
+    model: "ThresholdOptimizer"
+    base_estimator: "LogisticRegression"
+    constraints: "equalized_odds"
+    features: "pre_dispatch_valid_only"
+    tuning_split: "VALIDATION_SET_ONLY"
+    description: "Post-processing ThresholdOptimizer with group thresholds tuned strictly on the validation set."
+  B4:
+    name: "B4_Proposed_Tuned_XGB"
+    model: "Tuned_XGBoost"
+    features: "pre_dispatch_valid_only"
+    hpo_search_split: "TRAIN_CV_ONLY"
+    tuning_split: "VALIDATION_SET_ONLY"
+    description: "Proposed production architecture: Cost-sensitive, depth-constrained gradient boosted decision trees."
+
+datasets:
+  delhivery_logistics:
+    name: "Delhivery Logistics"
+    target: "Task_Success"
+    target_description: "Delivery completed without cutoff deadline breach (~is_cutoff)"
+    sensitive_attribute: "Education_Level"
+    sensitive_classification: "SYNTHETIC"
+    grouping_key: "trip_uuid"
+    grouping_semantics: "TRIP_SEGMENT_ISOLATION"
+    temporal_key: "trip_creation_time"
+    holdout_regimes: ["IID_HOLDOUT", "GROUP_HOLDOUT"]
+    feature_manifest_path: "configs/benchmark_features.yaml#delhivery_logistics"
+
+  amazon_last_mile:
+    name: "Amazon Last-Mile Routes"
+    target: "Task_Success"
+    target_description: "Route evaluation score is 'High'"
+    sensitive_attribute: "Education_Level"
+    sensitive_classification: "SYNTHETIC"
+    grouping_key: "station_code"
+    grouping_semantics: "UNSEEN_STATION_HOLDOUT"
+    temporal_key: "departure_hour"
+    holdout_regimes: ["IID_HOLDOUT", "GROUP_HOLDOUT", "TEMPORAL_HOLDOUT"]
+    feature_manifest_path: "configs/benchmark_features.yaml#amazon_last_mile"
+
+  adult_income:
+    name: "Adult Income Benchmark"
+    target: "Task_Success"
+    target_description: "Annual census income > $50,000"
+    sensitive_attribute: "Education_Group"
+    sensitive_classification: "REAL_OBSERVED"
+    grouping_key: null
+    temporal_key: null
+    holdout_regimes: ["IID_HOLDOUT"]
+    feature_manifest_path: "configs/benchmark_features.yaml#adult_income"
+
+reporting_metrics:
+  primary:
+    - "Balanced Accuracy"
+    - "Equalized Odds Diff"
+    - "Demographic Parity Diff"
+  secondary:
+    - "Accuracy"
+    - "Precision"
+    - "Recall"
+    - "Specificity (TNR)"
+    - "F1-Score"
+    - "Disparate Impact Ratio"
+  diagnostic:
+    - "ROC-AUC"
+    - "Brier Score"
+    - "Expected Calibration Error"
+    - "Predictive Parity Diff"
+    - "Prediction Diversity Entropy"
+    - "Accuracy Tradeoff Proxy"
+    - "User Utility Score (alpha=0.25)"
+    - "Subgroup TPR / FPR / PPV Breakdown"
+
+output_paths:
+  canonical_summary_csv: "docs/canonical_benchmark_summary.csv"
+  canonical_report_md: "docs/CANONICAL_BENCHMARK.md"

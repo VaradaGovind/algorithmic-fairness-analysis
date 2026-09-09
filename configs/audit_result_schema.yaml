@@ -1,0 +1,499 @@
+# ============================================================================
+# Algorithmic Fairness Analysis - Audit Result Schema Specification (Pass 8)
+# Schema Version: 1.0.0
+# Format: JSON Schema Draft-07 compatible YAML definition
+# ============================================================================
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "AlgorithmicFairnessAuditResult"
+description: "Product-grade machine-readable schema for algorithmic fairness evaluation and compliance audits."
+type: "object"
+required:
+  - "schema_version"
+  - "audit_id"
+  - "timestamp"
+  - "framework_version"
+  - "evaluation_scope"
+  - "dataset"
+  - "sensitive_attributes"
+  - "feature_contract"
+  - "split_protocol"
+  - "model_metadata"
+  - "evaluation_unit_alignment"
+  - "global_performance"
+  - "fairness_metrics"
+  - "subgroup_evaluations"
+  - "intersectional_evaluations"
+  - "uncertainty_quantification"
+  - "multiple_comparisons"
+  - "policy_compliance"
+  - "privacy_governance"
+  - "audit_fingerprint"
+
+properties:
+  schema_version:
+    type: "string"
+    description: "Semantic version of the audit result schema."
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    example: "1.0.0"
+
+  audit_id:
+    type: "string"
+    description: "Globally unique identifier for this audit execution instance."
+    example: "AUDIT-2026-09-08-DLH-TRIP-001"
+
+  timestamp:
+    type: "string"
+    format: "date-time"
+    description: "ISO-8601 UTC timestamp of audit generation."
+    example: "2026-09-08T12:00:00Z"
+
+  framework_version:
+    type: "string"
+    description: "Software release version of the fairness auditing engine."
+    example: "0.8.0-pass8"
+
+  evaluation_scope:
+    type: "object"
+    description: "Scope, business context, and regulatory purpose of the audit."
+    required:
+      - "purpose"
+      - "analysis_type"
+      - "target_decision"
+    properties:
+      purpose:
+        type: "string"
+        description: "Intended deployment or compliance purpose."
+      analysis_type:
+        type: "string"
+        enum: ["SCREENING_ANALYSIS", "CONFIRMATORY_AUDIT", "REGULATORY_SUBMISSION", "BENCHMARK_EXPLORATION"]
+      target_decision:
+        type: "string"
+        description: "Downstream automated decision affected by the model prediction."
+      intended_jurisdiction:
+        type: "string"
+        description: "Applicable legal or organizational jurisdiction."
+
+  dataset:
+    type: "object"
+    description: "Dataset provenance, raw unit of observation, and volume."
+    required:
+      - "dataset_name"
+      - "raw_observation_unit"
+      - "total_records"
+      - "entity_count"
+    properties:
+      dataset_name:
+        type: "string"
+      raw_observation_unit:
+        type: "string"
+        enum: ["ROW_LEVEL", "WAYPOINT_SEGMENT", "PACKAGE_SCAN", "TRANSACTION", "INDIVIDUAL_RECORD"]
+      total_records:
+        type: "integer"
+        minimum: 1
+      entity_count:
+        type: "integer"
+        minimum: 1
+      data_source_digest:
+        type: "string"
+        description: "Cryptographic hash (SHA-256) of raw input data file or stream."
+      collection_window:
+        type: "object"
+        properties:
+          start:
+            type: "string"
+          end:
+            type: "string"
+
+  sensitive_attributes:
+    type: "array"
+    description: "Protected characteristics analyzed with explicit lineage declarations."
+    items:
+      type: "object"
+      required:
+        - "attribute_name"
+        - "lineage"
+        - "disclosed_categories"
+      properties:
+        attribute_name:
+          type: "string"
+        lineage:
+          type: "string"
+          enum: ["OBSERVED", "DERIVED_PROXY", "SYNTHETIC", "IMPUTED"]
+          description: "Data lineage of sensitive attribute. IMPUTED and DERIVED_PROXY do not support legal causal claims."
+        proxy_derivation_rule:
+          type: "string"
+          description: "Documented mapping logic if lineage is DERIVED_PROXY or IMPUTED."
+        disclosed_categories:
+          type: "array"
+          items:
+            type: "string"
+
+  feature_contract:
+    type: "object"
+    description: "Prediction-time feature schema contract and leakage firewall verification."
+    required:
+      - "contract_name"
+      - "contract_status"
+      - "features_present_count"
+      - "unauthorized_sensitive_leakage"
+    properties:
+      contract_name:
+        type: "string"
+      contract_status:
+        type: "string"
+        enum: ["VALID", "SCHEMA_DRIFT", "VIOLATION"]
+      features_present_count:
+        type: "integer"
+      unauthorized_sensitive_leakage:
+        type: "boolean"
+        description: "Must be false. Direct protected attributes must not leak into prediction features."
+
+  split_protocol:
+    type: "object"
+    description: "Data partitioning protocol enforcing group/temporal isolation."
+    required:
+      - "split_type"
+      - "train_samples"
+      - "validation_samples"
+      - "locked_holdout_samples"
+      - "locked_test_evaluated_strictly_once"
+    properties:
+      split_type:
+        type: "string"
+        enum: ["GROUP_ISOLATED", "TEMPORAL_ISOLATED", "STRATIFIED_IID"]
+      split_key:
+        type: "string"
+      train_samples:
+        type: "integer"
+      validation_samples:
+        type: "integer"
+      locked_holdout_samples:
+        type: "integer"
+      locked_test_evaluated_strictly_once:
+        type: "boolean"
+
+  model_metadata:
+    type: "object"
+    description: "Model identity, architecture, and training reproducibility metadata."
+    required:
+      - "model_name"
+      - "model_family"
+    properties:
+      model_name:
+        type: "string"
+      model_family:
+        type: "string"
+      hyperparameters:
+        type: "object"
+      training_seed:
+        type: "integer"
+
+  evaluation_unit_alignment:
+    type: "object"
+    description: "Evaluation unit definition, aggregation method, and statistical alignment."
+    required:
+      - "evaluation_unit_level"
+      - "aggregation_strategy"
+      - "unit_key"
+      - "divergence_from_row_level"
+    properties:
+      evaluation_unit_level:
+        type: "string"
+        enum: ["ROW_LEVEL", "TRIP_LEVEL", "ROUTE_LEVEL", "WORKER_LEVEL", "INDIVIDUAL_LEVEL", "ENTITY_LEVEL"]
+      aggregation_strategy:
+        type: "string"
+        enum: ["NONE", "ANY_FAILURE", "ALL_SUCCESS", "MAJORITY_VOTE", "FIRST_RECORD", "LAST_RECORD", "ENTITY_WEIGHTED", "UNSUPPORTED_EVALUATION_UNIT"]
+      target_aggregation_strategy:
+        type: "string"
+        description: "Aggregation strategy applied to observed target labels."
+      prediction_aggregation_strategy:
+        type: "string"
+        description: "Aggregation strategy applied to model predictions."
+      unit_key:
+        type: "string"
+      records_per_unit_mean:
+        type: "number"
+      records_per_unit_max:
+        type: "integer"
+      divergence_from_row_level:
+        type: "boolean"
+        description: "True if evaluating at entity level yields materially different metrics than unweighted rows."
+      mismatch_guard_acknowledged:
+        type: "boolean"
+      observational_record_unit:
+        type: "string"
+        description: "Explicit raw data record unit (e.g. WAYPOINT_SEGMENT, INDIVIDUAL_RECORD)."
+      evaluation_decision_unit:
+        type: "string"
+        description: "Explicit decision-level unit (e.g. TRIP_LEVEL, ROUTE_LEVEL, INDIVIDUAL_LEVEL)."
+      fairness_group_definition:
+        type: "string"
+        description: "Explicit fairness grouping attribute or proxy definition."
+      cluster_dependence_unit:
+        type: "string"
+        nullable: true
+        description: "Explicit resampling cluster key or dependence unit."
+      statistical_estimand:
+        type: "object"
+        description: "Formal evaluation estimand contract."
+        required:
+          - "population"
+          - "decision_unit"
+          - "observation_unit"
+          - "weighting_rule"
+          - "target_quantity"
+          - "fairness_quantity"
+          - "estimand_status"
+        properties:
+          population:
+            type: "string"
+          decision_unit:
+            type: "string"
+          observation_unit:
+            type: "string"
+          weighting_rule:
+            type: "string"
+          target_quantity:
+            type: "string"
+          fairness_quantity:
+            type: "string"
+          bootstrap_unit:
+            type: "string"
+          grouping_definition:
+            type: "string"
+          estimand_status:
+            type: "string"
+            enum: ["SPECIFIED", "ESTIMAND_UNSPECIFIED"]
+
+
+  global_performance:
+    type: "object"
+    description: "Overall predictive performance metrics."
+    required:
+      - "accuracy"
+      - "balanced_accuracy"
+    properties:
+      accuracy:
+        type: "number"
+      balanced_accuracy:
+        type: "number"
+      precision:
+        type: "number"
+      recall:
+        type: "number"
+      f1_score:
+        type: "number"
+      roc_auc:
+        type: "number"
+      brier_score:
+        type: "number"
+      expected_calibration_error:
+        type: "number"
+
+  fairness_metrics:
+    type: "object"
+    description: "Primary group fairness parity metrics."
+    required:
+      - "demographic_parity_difference"
+      - "equalized_odds_difference"
+      - "disparate_impact_ratio"
+    properties:
+      demographic_parity_difference:
+        type: "number"
+      equal_opportunity_difference:
+        type: "number"
+      equalized_odds_difference:
+        type: "number"
+      predictive_parity_difference:
+        type: "number"
+      disparate_impact_ratio:
+        type: "number"
+
+  subgroup_evaluations:
+    type: "object"
+    description: "Disclosed subgroup breakdowns and calibration statuses."
+    additionalProperties:
+      type: "object"
+      properties:
+        sample_size:
+          type: "integer"
+        positive_count:
+          type: "integer"
+        negative_count:
+          type: "integer"
+        balanced_accuracy:
+          type: "number"
+        TPR:
+          type: "number"
+        FPR:
+          type: "number"
+        PPV:
+          type: "number"
+        support_status:
+          type: "string"
+
+  intersectional_evaluations:
+    type: "object"
+    description: "Compound intersectional fairness metrics and sparsity controls."
+    properties:
+      intersectional_attributes:
+        type: "array"
+        items:
+          type: "string"
+      total_intersectional_groups:
+        type: "integer"
+      adequately_supported_groups:
+        type: "integer"
+      sparse_groups_gated_count:
+        type: "integer"
+
+  uncertainty_quantification:
+    type: "object"
+    description: "Bootstrap uncertainty estimation aligned with statistical resampling unit."
+    required:
+      - "resampling_unit"
+      - "n_bootstraps"
+      - "valid_bootstrap_fraction"
+    properties:
+      resampling_unit:
+        type: "string"
+        enum: ["ROW_BOOTSTRAP", "CLUSTER_BOOTSTRAP"]
+      cluster_key:
+        type: "string"
+      n_bootstraps:
+        type: "integer"
+      valid_bootstrap_fraction:
+        type: "number"
+      intervals:
+        type: "object"
+
+  multiple_comparisons:
+    type: "object"
+    description: "Multiple-comparison accounting and post-hoc selection bias disclosures."
+    required:
+      - "total_comparisons_count"
+      - "selection_bias_disclosed"
+    properties:
+      total_comparisons_count:
+        type: "integer"
+      familywise_correction_procedure:
+        type: "string"
+      selection_bias_disclosed:
+        type: "boolean"
+      selection_bias_statement:
+        type: "string"
+
+  policy_compliance:
+    type: "object"
+    description: "Deterministic policy rules evaluation and evidence state."
+    required:
+      - "policy_name"
+      - "policy_type"
+      - "evidence_state"
+      - "policy_passed"
+    properties:
+      policy_name:
+        type: "string"
+      policy_type:
+        type: "string"
+        enum: ["ANALYTICAL", "ORGANIZATIONAL", "REGULATORY_MAPPING"]
+      evidence_state:
+        type: "string"
+        enum: ["SUFFICIENT_EVIDENCE_FOR_CLAIM", "INSUFFICIENT_EVIDENCE", "REFUTED_BY_EVIDENCE"]
+      policy_passed:
+        type: "boolean"
+      rules_satisfied:
+        type: "array"
+        items:
+          type: "string"
+      violations:
+        type: "array"
+        items:
+          type: "string"
+      abstentions:
+        type: "array"
+        items:
+          type: "string"
+      policy_status:
+        type: "string"
+        enum: ["PASS", "FAIL", "NOT_EVALUABLE"]
+      taxonomy_state:
+        type: "object"
+      human_review_boundary:
+        type: "object"
+
+
+  privacy_governance:
+    type: "object"
+    description: "Output privacy governance protecting entity anonymity."
+    required:
+      - "reporting_privacy_mode"
+      - "suppression_applied"
+      - "disclaimer"
+    properties:
+      reporting_privacy_mode:
+        type: "string"
+        enum: ["FULL_INTERNAL", "REDACTED_EXTERNAL", "SUMMARY_ONLY"]
+      suppression_applied:
+        type: "boolean"
+      min_reporting_population:
+        type: "integer"
+      suppressed_groups_count:
+        type: "integer"
+      disclosed_groups_count:
+        type: "integer"
+      labels_masked:
+        type: "boolean"
+      disclaimer:
+        type: "string"
+        description: "Must state clearly: Report privacy heuristic cell suppression, NOT differential privacy."
+
+  taxonomy_state:
+    type: "object"
+    description: "Decoupled audit execution, evidence sufficiency, model validity, and policy admissibility state."
+    required:
+      - "audit_execution_status"
+      - "evidence_status"
+      - "model_status"
+      - "policy_status"
+    properties:
+      audit_execution_status:
+        type: "string"
+        enum: ["COMPLETE", "BLOCKED", "ABORTED"]
+      evidence_status:
+        type: "string"
+        enum: ["SUFFICIENT", "INSUFFICIENT"]
+      model_status:
+        type: "string"
+        enum: ["ACCEPTABLE", "DEGENERATE", "INVALID"]
+      policy_status:
+        type: "string"
+        enum: ["PASS", "FAIL", "NOT_EVALUABLE"]
+      precedence_rule_applied:
+        type: ["string", "null"]
+      details:
+        type: "object"
+
+  human_review_boundary:
+    type: "object"
+    description: "Decoupled governance review requirements flagging qualitative/regulatory human judgment."
+    required:
+      - "human_review_required"
+      - "reason_codes"
+    properties:
+      human_review_required:
+        type: "boolean"
+      reason_codes:
+        type: "array"
+        items:
+          type: "string"
+      notes:
+        type: "array"
+        items:
+          type: "string"
+
+  audit_fingerprint:
+    type: "string"
+    description: "Deterministic SHA-256 hash of canonical JSON audit payload (excluding fingerprint itself)."
+    pattern: "^[a-f0-9]{64}$"
+

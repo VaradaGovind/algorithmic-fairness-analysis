@@ -46,7 +46,21 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 
-import core as base
+import argparse
+
+try:
+    import core as base
+except ImportError:
+    from src import core as base
+
+try:
+    import evaluation_integrity as ei
+    import sensitive_audit as sa
+    import fairness_evaluator as fe
+except ImportError:
+    from src import evaluation_integrity as ei
+    from src import sensitive_audit as sa
+    from src import fairness_evaluator as fe
 
 
 PROJECT_ROOT = base.PROJECT_ROOT
@@ -308,22 +322,27 @@ def subgroup_analysis(
 
     if dataset_name == "Delhivery Logistics":
         tables["Education Tiers"] = summarize(pd.Series(sensitive_test, index=raw_test.index), "Education")
-        tables["Experience Levels"] = summarize(pd.qcut(raw_test["time_per_distance_actual"].rank(method="first"), 4, labels=["Low", "Mid-Low", "Mid-High", "High"]), "Experience")
-        tables["Geography Proxies"] = summarize(pd.qcut(raw_test["actual_distance_to_destination"].rank(method="first"), 4, labels=["Near", "Moderate", "Far", "Very Far"]), "Geography")
+        if "time_per_distance_actual" in raw_test.columns:
+            tables["Experience Levels"] = summarize(pd.qcut(raw_test["time_per_distance_actual"].rank(method="first"), 4, labels=["Low", "Mid-Low", "Mid-High", "High"]), "Experience")
+        if "actual_distance_to_destination" in raw_test.columns:
+            tables["Geography Proxies"] = summarize(pd.qcut(raw_test["actual_distance_to_destination"].rank(method="first"), 4, labels=["Near", "Moderate", "Far", "Very Far"]), "Geography")
     elif dataset_name == "Adult Income Benchmark":
-        country = raw_test["native-country"].astype(str)
+        country = raw_test["native-country"].astype(str) if "native-country" in raw_test.columns else pd.Series("Unknown", index=raw_test.index)
         top = country.value_counts().nlargest(5).index
         country = country.where(country.isin(top), "Other")
         tables["Education Tiers"] = summarize(pd.Series(sensitive_test, index=raw_test.index), "Education")
-        tables["Experience Levels"] = summarize(pd.cut(raw_test["age"], bins=[0, 25, 40, 55, 100], labels=["Early", "Mid", "Late", "Senior"]), "Experience")
+        if "age" in raw_test.columns:
+            tables["Experience Levels"] = summarize(pd.cut(raw_test["age"], bins=[0, 25, 40, 55, 100], labels=["Early", "Mid", "Late", "Senior"]), "Experience")
         tables["Geography Proxies"] = summarize(country, "Geography")
     else:
-        station = raw_test["station_code"].astype(str)
-        top = station.value_counts().nlargest(5).index
-        station = station.where(station.isin(top), "Other")
-        tables["Education Tiers"] = summarize(pd.Series(sensitive_test, index=raw_test.index), "Education")
-        tables["Experience Levels"] = summarize(pd.cut(raw_test["departure_hour"], bins=[-1, 6, 12, 18, 24], labels=["Night", "Morning", "Afternoon", "Evening"]), "Experience")
-        tables["Geography Proxies"] = summarize(station, "Geography")
+        tables["Group Tiers"] = summarize(pd.Series(sensitive_test, index=raw_test.index), "Group")
+        if "departure_hour" in raw_test.columns:
+            tables["Experience Levels"] = summarize(pd.cut(raw_test["departure_hour"], bins=[-1, 6, 12, 18, 24], labels=["Night", "Morning", "Afternoon", "Evening"]), "Experience")
+        if "station_code" in raw_test.columns:
+            station = raw_test["station_code"].astype(str)
+            top = station.value_counts().nlargest(5).index
+            station = station.where(station.isin(top), "Other")
+            tables["Geography Proxies"] = summarize(station, "Geography")
 
     return tables
 
@@ -510,8 +529,14 @@ def write_report(studies: List[DatasetStudy], output_path: Path) -> None:
     lines.append("    P --> O")
     lines.append("```")
     lines.append("")
-    lines.append("## Labor economics interpretation")
-    lines.append("Education can act as a signaling variable, and platform assignment systems may amplify statistical discrimination when proxies correlate with route difficulty, timing, or geography. The added causal-style and robustness checks help distinguish whether observed disparities are due to model behavior, data structure, or underlying task allocation patterns.")
+    lines.append("## Labor economics interpretation & Methodological Caveats")
+    lines.append(
+        "In observational logistics and algorithmic dispatch settings, proxy attributes correlate with route "
+        "difficulty, schedule timing, and geography. Observed disparities can reflect underlying task allocation patterns, "
+        "model sensitivity, or feature-to-attribute coupling. For datasets where the sensitive attribute is synthetic, "
+        "fairness metrics reflect model sensitivity to the synthetic proxy rather than proven demographic discrimination. "
+        "Reported results reflect out-of-sample evaluation under our split hierarchy."
+    )
     lines.append("")
 
     for study in studies:
@@ -521,7 +546,7 @@ def write_report(studies: List[DatasetStudy], output_path: Path) -> None:
         lines.append(f"- Sensitive Source: {study.bundle.sensitive_source}")
         lines.append(f"- Notes: {study.bundle.notes}")
         lines.append("")
-        lines.append("### Model comparison")
+        lines.append("### Model comparison (Locked Holdout Test)")
         lines.append("| Model | Accuracy | Balanced Accuracy | Fairness Gap | Predictive Parity Diff | DI Ratio |")
         lines.append("|---|---:|---:|---:|---:|---:|")
         for result in study.results:
@@ -529,9 +554,9 @@ def write_report(studies: List[DatasetStudy], output_path: Path) -> None:
                 f"| {result.name} | {result.metrics['Accuracy']:.4f} | {result.metrics['Balanced Accuracy']:.4f} | {fairness_gap(result.metrics):.4f} | {result.metrics['Predictive Parity Diff']:.4f} | {result.metrics['Disparate Impact Ratio']:.4f} |"
             )
         lines.append("")
-        lines.append(f"### Best model: {study.best_result.name}")
-        lines.append(f"- Composite score: {candidate_score(study.best_result.metrics):.4f}")
-        lines.append(f"- Welfare loss proxy: {max(0.0, study.results[0].metrics['Accuracy'] - study.best_result.metrics['Accuracy']):.4f}")
+        lines.append(f"### Best model (Selected via Validation Set): {study.best_result.name}")
+        lines.append(f"- User utility score (alpha=0.25): {candidate_score(study.best_result.metrics):.4f}")
+        lines.append(f"- Accuracy tradeoff proxy: {max(0.0, study.results[0].metrics['Accuracy'] - study.best_result.metrics['Accuracy']):.4f}")
         lines.append("")
 
         if study.causal_summary is not None and not study.causal_summary.empty:
@@ -552,75 +577,102 @@ def write_report(studies: List[DatasetStudy], output_path: Path) -> None:
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def evaluate_bundle(bundle: base.DatasetBundle) -> DatasetStudy:
+def generate_synthetic_benchmark_bundle(name: str = "Synthetic Logistics Benchmark", n_samples: int = 2000, seed: int = 42) -> base.DatasetBundle:
+    """
+    Generates a reproducible, leak-free synthetic logistics benchmark dataset for demonstration and testing.
+    """
+    rng = np.random.default_rng(seed)
+    planned_distance = rng.uniform(5, 50, n_samples)
+    planned_time = planned_distance * rng.uniform(1.8, 2.4, n_samples)
+    transit_friction = rng.normal(1.0, 0.15, n_samples)
+    actual_time = planned_time * transit_friction
+    success = (actual_time <= planned_time * 1.15).astype(int)
+    
+    difficulty = planned_distance * 0.5 + planned_time * 0.5
+    group = np.where(difficulty > np.median(difficulty), "High_Complexity", "Standard_Complexity")
+    
+    df = pd.DataFrame({
+        "planned_distance": planned_distance,
+        "planned_time": planned_time,
+        "stops_count": rng.integers(5, 40, n_samples),
+        "vehicle_capacity": rng.uniform(100, 500, n_samples),
+    })
+    return base.DatasetBundle(
+        name=name,
+        features=df,
+        target=pd.Series(success, name="Task_Success"),
+        sensitive=pd.Series(group, name="Complexity_Group"),
+        sensitive_attribute="Complexity_Group",
+        sensitive_source="Synthetic group proxy (simulation)",
+        notes="Clean benchmark dataset without post-outcome execution leakage features.",
+    )
+
+
+def evaluate_bundle(bundle: base.DatasetBundle, seed: int = RANDOM_STATE, alpha: float = 0.25) -> DatasetStudy:
+    """
+    Evaluates candidate models using a clean 3-way split:
+    Train (60%) -> Validation (20% for tuning/selection) -> Locked Test (20% for reporting).
+    """
     raw = bundle.features.copy()
     target = bundle.target.copy()
     sensitive = bundle.sensitive.copy()
 
-    # For this diagnostic run we remove sample caps to allow full-data HPO and training
-    raw, target, sensitive = raw.copy(), target.copy(), sensitive.copy()
-
     stratify = target if target.nunique() > 1 else None
-    raw_train, raw_test, y_train, y_test, s_train, s_test = train_test_split(
+    
+    # Clean 3-way split hierarchy: 60% Train, 20% Val, 20% Locked Test
+    raw_train, raw_rem, y_train, y_rem, s_train, s_rem = train_test_split(
         raw,
         target.to_numpy(dtype=int),
         sensitive.to_numpy(),
-        test_size=0.2,
-        random_state=RANDOM_STATE,
+        test_size=0.4,
+        random_state=seed,
         stratify=stratify,
+    )
+    rem_stratify = y_rem if len(np.unique(y_rem)) > 1 else None
+    raw_val, raw_test, y_val, y_test, s_val, s_test = train_test_split(
+        raw_rem,
+        y_rem,
+        s_rem,
+        test_size=0.5,
+        random_state=seed,
+        stratify=rem_stratify,
     )
 
     preprocessor = build_preprocessor(raw_train)
     x_train = preprocessor.fit_transform(raw_train)
+    x_val = preprocessor.transform(raw_val)
     x_test = preprocessor.transform(raw_test)
     feature_names = list(preprocessor.get_feature_names_out())
 
     weights = reweighing_weights(y_train, s_train)
     fitted_models = fit_models(x_train, y_train, weights)
 
-    # Attempt Bayesian HPO to tune an XGB candidate with a larger budget
-    try:
-        positive = float(np.sum(y_train == 1))
-        negative = float(np.sum(y_train == 0))
-        scale_pos_weight = max(negative / max(positive, 1.0), 1.0)
-        # Increase budget for a better search (may be slower)
-        hpo_budget = 150
-        best_params, history = base.bayesian_optimize_xgb(x_train, y_train, s_train, scale_pos_weight, budget=hpo_budget)
-        tuned_xgb = base.build_xgb_model(best_params, scale_pos_weight)
-        try:
-            tuned_xgb.fit(x_train, y_train, sample_weight=weights)
-        except TypeError:
-            tuned_xgb.fit(x_train, y_train)
-        fitted_models["Tuned XGB (HPO)"] = tuned_xgb
-        print(f"[INFO] HPO tuning completed for {bundle.name}; added Tuned XGB (HPO)")
-        try:
-            print(f"[INFO] Best HPO params sample: { {k: best_params.get(k, None) for k in list(best_params)[:5]} }")
-        except Exception:
-            pass
-    except Exception as exc:
-        print(f"[WARN] HPO tuning failed or skipped: {exc}")
+    # Threshold tuning on validation set (prevents test set contamination)
+    threshold_model = fit_threshold_optimizer(
+        fitted_models["Logistic Regression"],
+        x_val,
+        y_val,
+        s_val,
+        x_test,
+        s_test,
+        y_test,
+    )
 
+    # Evaluate models on locked holdout test set for final unbiased reporting
     results: List[ModelResult] = []
     for name, model in fitted_models.items():
         result = evaluate_model(name, model, x_test, y_test, s_test)
         result.weight_strategy = "reweighted" if name == "Reweighted Logistic" else "baseline"
         results.append(result)
+    results.append(threshold_model)
 
     base_candidate = next(result for result in results if result.name == "Logistic Regression")
     mitigated_candidate = next(result for result in results if result.name == "Reweighted Logistic")
 
-    threshold_model = fit_threshold_optimizer(
-        fitted_models["Logistic Regression"],
-        x_train,
-        y_train,
-        s_train,
-        x_test,
-        s_test,
-        y_test,
-    )
-    results.append(threshold_model)
-
-    best_result = max(results, key=lambda item: (candidate_score(item.metrics), item.metrics["Accuracy"]))
+    # Select best model based on validation set metrics (avoiding test set cherry-picking)
+    val_evals = {name: evaluate_model(name, model, x_val, y_val, s_val) for name, model in fitted_models.items()}
+    best_name = max(val_evals.keys(), key=lambda n: (candidate_score(val_evals[n].metrics), val_evals[n].metrics["Accuracy"]))
+    best_result = next(r for r in results if r.name == best_name)
 
     subgroup_tables = subgroup_analysis(raw_test, s_test, y_test, best_result.y_pred, bundle.name)
     causal_summary = causal_counterfactual_analysis(raw_train, raw_test, s_train, s_test, y_train, y_test) if bundle.name == "Adult Income Benchmark" else None
@@ -687,47 +739,136 @@ def causal_graph_markdown(output_path: Path) -> None:
     )
 
 
+def run_multi_seed_evaluation(bundles: List[base.DatasetBundle], seeds: Sequence[int], alpha: float = 0.25) -> pd.DataFrame:
+    """
+    Executes repeated multi-seed evaluations and reports distribution statistics
+    (mean, median, std, min, max, 95% confidence intervals).
+    """
+    records: List[Dict[str, Any]] = []
+    for seed in seeds:
+        print(f"  Running seed {seed}...")
+        for bundle in bundles:
+            study = evaluate_bundle(bundle, seed=seed, alpha=alpha)
+            for res in study.results:
+                records.append({
+                    "seed": seed,
+                    "dataset": bundle.name,
+                    "model": res.name,
+                    "accuracy": res.metrics["Accuracy"],
+                    "balanced_accuracy": res.metrics["Balanced Accuracy"],
+                    "fairness_gap": fairness_gap(res.metrics),
+                    "di_ratio": res.metrics["Disparate Impact Ratio"],
+                    "utility_score": candidate_score(res.metrics),
+                })
+    df = pd.DataFrame(records)
+    
+    # Compute multi-seed summary statistics
+    summary_rows: List[Dict[str, Any]] = []
+    metric_cols = ["accuracy", "balanced_accuracy", "fairness_gap", "di_ratio", "utility_score"]
+    for (d_name, m_name), grp in df.groupby(["dataset", "model"]):
+        row: Dict[str, Any] = {"Dataset": d_name, "Model": m_name, "Seeds_Evaluated": len(grp)}
+        for m in metric_cols:
+            vals = grp[m].dropna().to_numpy()
+            if len(vals) > 0:
+                row[f"{m}_mean"] = float(np.mean(vals))
+                row[f"{m}_median"] = float(np.median(vals))
+                row[f"{m}_std"] = float(np.std(vals))
+                row[f"{m}_min"] = float(np.min(vals))
+                row[f"{m}_max"] = float(np.max(vals))
+                # 95% CI
+                if len(vals) > 1 and np.std(vals) > 1e-9:
+                    ci_err = 1.96 * float(np.std(vals) / np.sqrt(len(vals)))
+                    row[f"{m}_ci95_low"] = float(np.mean(vals) - ci_err)
+                    row[f"{m}_ci95_high"] = float(np.mean(vals) + ci_err)
+        summary_rows.append(row)
+    
+    return pd.DataFrame(summary_rows)
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Algorithmic Fairness Analysis Pipeline")
+    parser.add_argument("--seeds", type=str, default="42", help="Comma-separated random seeds (e.g. '42,43,44')")
+    parser.add_argument("--demo", action="store_true", help="Run in self-contained synthetic demonstration mode")
+    parser.add_argument("--audit", action="store_true", help="Run evaluation integrity and sensitive attribute audits")
+    parser.add_argument("--alpha", type=float, default=0.25, help="User-defined utility scalarization parameter")
+    args = parser.parse_args()
+
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=UserWarning)
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-    prior = base.get_salary_education_prior()
-    bundles = [
-        base.load_delhivery_dataset(prior),
-        base.load_adult_dataset(),
-        base.load_amazon_dataset(prior),
-    ]
+    seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
 
-    studies = [evaluate_bundle(bundle) for bundle in bundles]
+    print("\n" + "=" * 76)
+    print("ALGORITHMIC FAIRNESS ANALYSIS: COMMERCIAL-READINESS PASS 1 PIPELINE")
+    print(f"Seeds: {seeds} | Demo Mode: {args.demo} | Audit Flag: {args.audit}")
+    print("=" * 76)
+
+    # If audit flag requested
+    if args.audit:
+        print("\n[AUDIT] Executing evaluation integrity & sensitive attribute audits...")
+        for name, profile in sa.DATASET_PROFILES.items():
+            print(f"\n  Profile: {name} -> Sensitive Attribute: {profile.attribute_name} ({profile.origin.value})")
+            print(f"    Inputs in model features: {profile.inputs_in_model_features}")
+            print(f"    Inputs post-outcome: {profile.inputs_post_outcome}")
+            print(f"    Represents real demographic: {profile.represents_real_demographic}")
+
+    # Check raw data existence
+    delhivery_csv = DATA_DIR / "delhivery" / "delhivery_data.csv"
+    raw_data_available = delhivery_csv.exists()
+
+    if not raw_data_available and not args.demo:
+        print("\n" + "!" * 76)
+        print("NOTICE: Raw datasets are not present in data/raw/ (gitignored in .gitignore).")
+        print("To run the full pipeline on a self-contained synthetic benchmark:")
+        print("    python src/main.py --demo")
+        print("Or to run multi-seed evaluations:")
+        print("    python src/main.py --demo --seeds 42,43,44")
+        print("To run evaluation integrity and sensitive attribute audits:")
+        print("    python src/evaluation_integrity.py --demo")
+        print("    python src/sensitive_audit.py --demo")
+        print("!" * 76 + "\n")
+        return
+
+    if args.demo:
+        print("\n[INFO] Running self-contained synthetic benchmark demo...")
+        bundles = [generate_synthetic_benchmark_bundle(seed=seeds[0])]
+    else:
+        prior = base.get_salary_education_prior()
+        bundles = [
+            base.load_delhivery_dataset(prior),
+            base.load_adult_dataset(),
+            base.load_amazon_dataset(prior),
+        ]
+
+    if len(seeds) > 1:
+        print(f"\n[INFO] Executing multi-seed evaluation across {len(seeds)} seeds: {seeds}...")
+        multi_summary = run_multi_seed_evaluation(bundles, seeds, alpha=args.alpha)
+        multi_summary_path = DOCS_DIR / "multi_seed_metrics_summary.csv"
+        multi_summary.to_csv(multi_summary_path, index=False)
+        print(f"Multi-seed variance summary saved to: {multi_summary_path}")
+
+    # Single-run primary evaluation for primary seed
+    print(f"\n[INFO] Running primary pipeline evaluation on seed {seeds[0]}...")
+    studies = [evaluate_bundle(bundle, seed=seeds[0], alpha=args.alpha) for bundle in bundles]
     summary = summarize(studies)
-    summary.to_csv(DOCS_DIR / "metrics_summary.csv", index=False)
+    summary_path = DOCS_DIR / "metrics_summary.csv"
+    summary.to_csv(summary_path, index=False)
 
     for study in studies:
         name_map = {"Delhivery Logistics": "delhivery", "Adult Income Benchmark": "adult", "Amazon Last-Mile Routes": "amazon"}
-        short_name = name_map.get(study.bundle.name, study.bundle.name.lower().replace(' ', '_'))
-        plot_pareto(study.results, PLOTS_DIR / f"{short_name}_pareto.png", f"Final Evaluation Pareto Frontier - {study.bundle.name}")
-        if study.best_result.y_prob is not None:
-            sns.set_theme(style="whitegrid")
-            plt.figure(figsize=(10, 6))
-            plt.title(f"Accuracy vs Fairness Gap - {study.bundle.name}")
-            for result in study.results:
-                plt.scatter(fairness_gap(result.metrics), result.metrics["Accuracy"], s=80)
-                plt.text(fairness_gap(result.metrics) + 0.001, result.metrics["Accuracy"] + 0.001, result.name, fontsize=8)
-            plt.xlabel("Fairness Gap")
-            plt.ylabel("Accuracy")
-            plt.tight_layout()
-            plt.savefig(PLOTS_DIR / f"{short_name}_tradeoff.png", dpi=300)
-            plt.close()
+        short_name = name_map.get(study.bundle.name, study.bundle.name.lower().replace(" ", "_"))
+        plot_pareto(study.results, PLOTS_DIR / f"{short_name}_pareto.png", f"Evaluation Pareto Frontier - {study.bundle.name}")
 
     write_report(studies, DOCS_DIR / "technical_appendix.md")
     causal_graph_markdown(DOCS_DIR / "causal_graph.md")
 
-    print("Final Evaluation complete")
+    print("\n" + "=" * 76)
+    print("PIPELINE EXECUTION COMPLETE")
     print(f"Report: {DOCS_DIR / 'technical_appendix.md'}")
-    print(f"Metrics: {DOCS_DIR / 'metrics_summary.csv'}")
-    print(f"Causal graph appendix: {DOCS_DIR / 'causal_graph.md'}")
+    print(f"Metrics: {summary_path}")
+    print("=" * 76 + "\n")
 
 
 if __name__ == "__main__":

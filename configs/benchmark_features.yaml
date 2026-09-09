@@ -1,0 +1,390 @@
+# ============================================================================
+# Prediction-Time Feature Contract & Benchmark Feature Manifest
+# Classifies every dataset column by operational availability and timing.
+# ============================================================================
+
+delhivery_logistics:
+  dataset_name: "Delhivery Logistics"
+  prediction_target: "Task_Success"
+  target_definition: "Delivery completed before cutoff deadline (~is_cutoff)"
+  grouping_key: "trip_uuid"
+  features:
+    - feature_name: "osrm_distance"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "osrm_distance"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Planned road distance calculated by Open Source Routing Machine (OSRM) before vehicle leaves the depot."
+
+    - feature_name: "osrm_time"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "osrm_time"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Estimated travel duration calculated by OSRM routing engine prior to dispatch."
+
+    - feature_name: "segment_osrm_distance"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "segment_osrm_distance"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Pre-planned segment routing distance between scheduled waypoints."
+
+    - feature_name: "segment_osrm_time"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "segment_osrm_time"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Pre-planned segment expected transit duration."
+
+    - feature_name: "time_per_distance_osrm"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "osrm_time / osrm_distance"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Planned average route pace/speed calculated strictly from pre-dispatch OSRM routing estimates."
+
+    - feature_name: "actual_time"
+      role: "leaked_feature"
+      classification: "POST_OUTCOME"
+      source_column: "actual_time"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Total actual trip duration measured only after the delivery vehicle arrives at the destination. Directly leaks the cutoff outcome."
+
+    - feature_name: "segment_actual_time"
+      role: "leaked_feature"
+      classification: "POST_OUTCOME"
+      source_column: "segment_actual_time"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Actual elapsed transit time of segment measured upon completing the segment."
+
+    - feature_name: "actual_distance_to_destination"
+      role: "leaked_feature"
+      classification: "POST_OUTCOME"
+      source_column: "actual_distance_to_destination"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Actual vehicle odometer distance traversed during trip, recorded post-trip."
+
+    - feature_name: "actual_vs_osrm_distance_ratio"
+      role: "leaked_feature"
+      classification: "DERIVED_FROM_OUTCOME"
+      source_column: "actual_distance_to_destination / osrm_distance"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Mathematical ratio derived from post-outcome actual distance."
+
+    - feature_name: "actual_vs_osrm_time_ratio"
+      role: "leaked_feature"
+      classification: "DERIVED_FROM_OUTCOME"
+      source_column: "actual_time / osrm_time"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Mathematical ratio derived from post-outcome actual time."
+
+    - feature_name: "time_per_distance_actual"
+      role: "leaked_feature"
+      classification: "DERIVED_FROM_OUTCOME"
+      source_column: "actual_time / actual_distance_to_destination"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Actual realized pacing derived from post-outcome variables."
+
+    - feature_name: "segment_deviation"
+      role: "leaked_feature"
+      classification: "DERIVED_FROM_OUTCOME"
+      source_column: "abs(segment_actual_time - segment_osrm_time)"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Realized segment schedule variance derived from segment_actual_time."
+
+    - feature_name: "is_cutoff"
+      role: "target_source"
+      classification: "POST_OUTCOME"
+      source_column: "is_cutoff"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "BANNED: Raw target indicator recorded when a trip exceeds the delivery cutoff."
+
+    - feature_name: "Education_Level"
+      role: "sensitive_attribute"
+      classification: "SYNTHETIC"
+      source_column: "assign_synthetic_education(proxy_signal)"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: true
+      justification: "Constructed evaluation attribute. Calibrated against salary distributions, but synthetic. Used strictly for algorithmic sensitivity auditing."
+
+amazon_last_mile:
+  dataset_name: "Amazon Last-Mile Routes"
+  prediction_target: "Task_Success"
+  target_definition: "Route evaluation score is 'High' (route_score == 'High')"
+  grouping_key: "station_code"
+  features:
+    - feature_name: "departure_hour"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "departure_time_utc"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Scheduled departure hour (UTC) determined before route dispatch."
+
+    - feature_name: "executor_capacity_cm3"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "executor_capacity_cm3"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Physical cargo volume capacity of delivery vehicle assigned to route."
+
+    - feature_name: "num_stops_total"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "len(stops)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Total number of scheduled package delivery stops on manifest."
+
+    - feature_name: "num_dropoffs"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "count(type == 'Dropoff')"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Total customer dropoff package tasks assigned to route."
+
+    - feature_name: "stops_per_dropoff_ratio"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "num_stops_total / num_dropoffs"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Ratio of planned stops to dropoffs computed from manifest."
+
+    - feature_name: "lat_mean"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "mean(stops.lat)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Geographic centroid latitude of planned route stops."
+
+    - feature_name: "lng_mean"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "mean(stops.lng)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Geographic centroid longitude of planned route stops."
+
+    - feature_name: "lat_std"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "std(stops.lat)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Spatial dispersion of planned stops in north-south dimension."
+
+    - feature_name: "lng_std"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "std(stops.lng)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Spatial dispersion of planned stops in east-west dimension."
+
+    - feature_name: "bbox_area"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "delta_lat * delta_lng"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Geographic bounding box area containing all planned delivery addresses."
+
+    - feature_name: "radial_dispersion"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "mean_distance_to_centroid"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Average Euclidean dispersion of package dropoffs from route centroid."
+
+    - feature_name: "spatial_density"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "num_dropoffs / bbox_area"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Package delivery density per unit geographic area on planned manifest."
+
+    - feature_name: "station_code"
+      role: "feature_and_group"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "station_code"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Fulfillment depot identifier; known pre-dispatch and serves as the domain grouping key."
+
+    - feature_name: "invalid_sequence_score"
+      role: "leaked_or_ambiguous"
+      classification: "REVIEW_REQUIRED"
+      source_column: "invalid_sequence_scores.json"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "EXCLUDED: Evaluates route sequence quality. In ALMRRC, it reflects sequence feasibility penalties often evaluated on executed driver trajectories. Excluded from canonical benchmark to guarantee zero post-execution leakage."
+
+    - feature_name: "route_efficiency"
+      role: "leaked_or_ambiguous"
+      classification: "DERIVED_FROM_OUTCOME"
+      source_column: "executor_capacity_cm3 / invalid_sequence_score"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: false
+      justification: "EXCLUDED: Derived from invalid_sequence_score."
+
+    - feature_name: "Education_Level"
+      role: "sensitive_attribute"
+      classification: "SYNTHETIC"
+      source_column: "assign_synthetic_education(proxy_signal)"
+      available_at_prediction_time: false
+      included_in_canonical_benchmark: true
+      justification: "Constructed evaluation attribute. Calibrated against salary distributions, but synthetic. Used strictly for algorithmic sensitivity auditing."
+
+adult_income:
+  dataset_name: "Adult Income Benchmark"
+  prediction_target: "Task_Success"
+  target_definition: "Annual income > $50,000"
+  grouping_key: null
+  features:
+    - feature_name: "age"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "age"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Individual age reported in survey."
+
+    - feature_name: "workclass"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "workclass"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Employment sector (Private, Self-emp, Government). Predictive feature; note that for causal modeling it acts as a post-education mediator."
+
+    - feature_name: "fnlwgt"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "fnlwgt"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Census survey population sampling weight."
+
+    - feature_name: "marital-status"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "marital-status"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Marital status recorded in census."
+
+    - feature_name: "occupation"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "occupation"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Job role category. Valid predictive feature; in causal DAG, represents a post-education mediator."
+
+    - feature_name: "relationship"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "relationship"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Household role (Husband, Wife, Own-child, etc.)."
+
+    - feature_name: "race"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "race"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Racial demographic recorded in census."
+
+    - feature_name: "sex"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "sex"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Gender recorded in census."
+
+    - feature_name: "capital-gain"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "capital-gain"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Annual investment capital gains."
+
+    - feature_name: "capital-loss"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "capital-loss"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Annual investment capital losses."
+
+    - feature_name: "hours-per-week"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "hours-per-week"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Usual work hours per week."
+
+    - feature_name: "native-country"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "native-country"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Country of origin."
+
+    - feature_name: "capital_total"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "capital-gain + capital-loss"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Total capital flow."
+
+    - feature_name: "capital_ratio"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "(gain - loss) / (total + 1)"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Net capital ratio."
+
+    - feature_name: "work_intensity"
+      role: "feature"
+      classification: "PRE_DISPATCH_VALID"
+      source_column: "hours-per-week / 40.0"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Work hours relative to standard 40-hour work week."
+
+    - feature_name: "Education_Group"
+      role: "sensitive_attribute"
+      classification: "REAL_OBSERVED"
+      source_column: "education-num >= 13"
+      available_at_prediction_time: true
+      included_in_canonical_benchmark: true
+      justification: "Observed demographic attribute: HigherEd (bachelor's or above) vs NonHigherEd. Excluded from prediction features."

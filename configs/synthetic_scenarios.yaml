@@ -1,0 +1,145 @@
+# ============================================================================
+# Synthetic Benchmark Scenarios & Signal Regimes Manifest
+# Defines controlled, reproducible data-generating processes for fairness evaluation.
+# Ensures the benchmark distinguishes useful models from trivial constant predictors.
+# ============================================================================
+
+signal_regimes:
+  LOW_SIGNAL:
+    description: "Weak linear association between pre-dispatch features and delivery outcome."
+    feature_coefficients:
+      planned_distance: -0.25
+      planned_time: -0.30
+      stops_count: -0.20
+      vehicle_capacity: 0.15
+    intercept: 0.0
+    noise_sigma: 1.5
+    expected_auc_range: [0.56, 0.64]
+    class_prevalence: 0.50
+
+  MODERATE_SIGNAL:
+    description: "Realistic operational signal with moderate predictive power."
+    feature_coefficients:
+      planned_distance: -0.75
+      planned_time: -0.80
+      stops_count: -0.65
+      vehicle_capacity: 0.45
+    intercept: 0.1
+    noise_sigma: 1.0
+    expected_auc_range: [0.70, 0.79]
+    class_prevalence: 0.52
+
+  HIGH_SIGNAL:
+    description: "Strong feature-outcome link with high discriminative separation."
+    feature_coefficients:
+      planned_distance: -1.50
+      planned_time: -1.60
+      stops_count: -1.20
+      vehicle_capacity: 0.90
+    intercept: 0.2
+    noise_sigma: 0.6
+    expected_auc_range: [0.85, 0.94]
+    class_prevalence: 0.55
+
+fairness_scenarios:
+  SCENARIO_A_NO_GROUP_EFFECT:
+    description: "Sensitive attribute is statistically independent of features X and target Y."
+    signal_regime: "MODERATE_SIGNAL"
+    group_prevalence: 0.50
+    group_feature_shift: 0.0
+    group_direct_effect: 0.0
+    expected_disparity: "NEAR_ZERO"
+    evaluation_hypothesis: "Any observed disparity is within statistical sampling noise."
+
+  SCENARIO_B_PREDICTIVE_FEATURE_GROUP_CORRELATION:
+    description: "Sensitive attribute is correlated with difficulty features, but has zero direct causal effect."
+    signal_regime: "MODERATE_SIGNAL"
+    group_prevalence: 0.45
+    group_feature_shift: 0.85
+    group_direct_effect: 0.0
+    expected_disparity: "MODERATE_PROXY_DISPARITY"
+    evaluation_hypothesis: "Fairness disparity emerges through legitimate feature differences, not group bias."
+
+  SCENARIO_C_EXPLICIT_GROUP_EFFECT:
+    description: "Data-generating process applies an explicit penalty to the disadvantaged group."
+    signal_regime: "MODERATE_SIGNAL"
+    group_prevalence: 0.50
+    group_feature_shift: 0.20
+    group_direct_effect: -1.25
+    expected_disparity: "SUBSTANTIAL_DIRECT_DISPARITY"
+    evaluation_hypothesis: "Mitigation algorithms should reduce parity gaps while trading off accuracy."
+
+  SCENARIO_D_SEVERE_FAIRNESS_TRADEOFF:
+    alias: "SCENARIO_D_IMPOSSIBLE_FAIRNESS"
+    description: "Severe base rate differences where demographic parity conflicts sharply with predictive accuracy. Demonstrates steep Pareto trade-offs without making unprovable claims of absolute mathematical impossibility."
+    signal_regime: "HIGH_SIGNAL"
+    group_prevalence: 0.50
+    group_feature_shift: 1.60
+    group_direct_effect: -1.80
+    expected_disparity: "SEVERE_TRADE_OFF"
+    evaluation_hypothesis: "Enforcing demographic parity degrades balanced accuracy, exposing the Pareto boundary."
+
+  SCENARIO_E_CONSTANT_PREDICTOR:
+    description: "Imbalanced outcome target with zero mutual information, triggering majority class collapse."
+    signal_regime: "ZERO_SIGNAL"
+    group_prevalence: 0.50
+    group_feature_shift: 0.0
+    group_direct_effect: 0.0
+    class_prevalence: 0.894
+    expected_disparity: "ZERO_BY_DEGENERATION"
+    evaluation_hypothesis: "Anti-degeneracy detector must flag models as DEGENERATE and FAIR_BUT_DEGENERATE."
+
+fairness_policies:
+  Standard_Operational_Policy:
+    description: "Default balanced production policy requiring non-degeneracy, parity gaps <= 0.10, and balanced accuracy >= 0.60."
+    max_equalized_odds_diff: 0.10
+    max_demographic_parity_diff: 0.10
+    max_predictive_parity_diff: null
+    min_disparate_impact_ratio: 0.80
+    min_balanced_accuracy: 0.60
+    min_recall: 0.10
+    min_specificity: 0.10
+    min_positive_rate: 0.02
+    max_positive_rate: 0.98
+    min_entropy: 0.10
+    minimum_group_support: 5
+    require_better_than_majority_baseline: true
+
+  Strict_Equalized_Odds_Policy:
+    description: "High-compliance policy strictly constraining Equalized Odds Diff <= 0.05 and requiring balanced accuracy >= 0.70."
+    max_equalized_odds_diff: 0.05
+    max_demographic_parity_diff: null
+    max_predictive_parity_diff: null
+    min_disparate_impact_ratio: null
+    min_balanced_accuracy: 0.70
+    min_recall: 0.20
+    min_specificity: 0.20
+    min_positive_rate: 0.05
+    max_positive_rate: 0.95
+    min_entropy: 0.20
+    minimum_group_support: 10
+    require_better_than_majority_baseline: true
+
+  Lenient_Diagnostic_Policy:
+    description: "Exploratory policy used for early-stage screening with relaxed parity and utility boundaries."
+    max_equalized_odds_diff: 0.20
+    max_demographic_parity_diff: 0.20
+    max_predictive_parity_diff: null
+    min_disparate_impact_ratio: 0.60
+    min_balanced_accuracy: 0.55
+    min_recall: 0.05
+    min_specificity: 0.05
+    min_positive_rate: 0.01
+    max_positive_rate: 0.99
+    min_entropy: 0.05
+    minimum_group_support: 5
+    require_better_than_majority_baseline: false
+
+guardrail_thresholds:
+  min_balanced_accuracy_useful: 0.55
+  max_prediction_rate_collapse_low: 0.02
+  max_prediction_rate_collapse_high: 0.98
+  min_prediction_entropy: 0.10
+  acceptable_equalized_odds_diff: 0.10
+  acceptable_demographic_parity_diff: 0.10
+  disparate_impact_four_fifths_threshold: 0.80

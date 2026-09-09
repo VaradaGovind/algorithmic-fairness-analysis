@@ -1,0 +1,65 @@
+# ============================================================================
+# Dataset Provenance Configuration
+# Declarative manifest of benchmark datasets, licensing, and timing contracts.
+# ============================================================================
+
+provenance_records:
+  - dataset_name: "Delhivery Logistics"
+    dataset_type: "REAL_DATA"
+    source_reference: "Kaggle / Delhivery Logistics Dataset (Historical operational delivery records)"
+    version_or_date: "2022"
+    license_notes: "Public repository / Unverified commercial redistribution terms. Not committed to repo."
+    target_definition: "Task_Success = 1 - is_cutoff (Realized delivery did not breach scheduled cutoff deadline)"
+    sensitive_attributes: ["Education_Level"]
+    sensitive_origin: "CONSTRUCTED_ATTRIBUTE"
+    feature_timing_contract: "PRE_DISPATCH_VALID: OSRM planned distances/times only. Post-delivery times (actual_time) banned."
+    expected_grouping_key: "trip_uuid"
+    expected_temporal_key: "trip_creation_time"
+    redistribution_status: "LOCAL_STAGING_ONLY_NO_GIT"
+    verified_licensing: false
+    notes: "Sensitive attribute 'Education_Level' is synthetically constructed from salary priors, not real driver demographics."
+
+  - dataset_name: "Amazon Last-Mile Routes"
+    dataset_type: "REAL_DATA"
+    source_reference: "Amazon Last-Mile Routing Research Challenge (Merchante et al., 2021)"
+    version_or_date: "2021"
+    license_notes: "Research use only under Amazon challenge terms. Redistribution prohibited."
+    target_definition: "Task_Success = (route_score == 'High')"
+    sensitive_attributes: ["Education_Level"]
+    sensitive_origin: "CONSTRUCTED_ATTRIBUTE"
+    feature_timing_contract: "PRE_DISPATCH_VALID: Scheduled stops, capacity, bbox area. Realized sequence scores banned."
+    expected_grouping_key: "station_code"
+    expected_temporal_key: "departure_hour"
+    redistribution_status: "RESTRICTED_RESEARCH_USE"
+    verified_licensing: false
+    notes: "Education_Level constructed from route geographic complexity proxies; driver demographics absent."
+
+  - dataset_name: "Adult Income Benchmark"
+    dataset_type: "REAL_DATA"
+    source_reference: "UCI Machine Learning Repository / US Census Bureau 1994 Current Population Survey"
+    version_or_date: "1994"
+    license_notes: "Public domain / CC BY 4.0. Suitable for academic benchmarking."
+    target_definition: "Task_Success = (income > 50K)"
+    sensitive_attributes: ["Education_Group", "Sex", "Race"]
+    sensitive_origin: "REAL_OBSERVED"
+    feature_timing_contract: "SURVEY_CONCURRENT: All features observed concurrently during census interview."
+    expected_grouping_key: null
+    expected_temporal_key: null
+    redistribution_status: "PUBLIC_PERMISSIVE"
+    verified_licensing: true
+    notes: "Real observed demographic attributes. Causal interpretations must adjust for post-treatment mediators."
+
+  - dataset_name: "Synthetic Controlled Benchmark"
+    dataset_type: "SYNTHETIC_DATA"
+    source_reference: "Algorithmic Fairness Analysis Framework / Controlled Logistics DGP"
+    version_or_date: "Pass 4 (2026)"
+    license_notes: "MIT License (Open Source)"
+    target_definition: "Task_Success = [sigmoid(z) >= 0.50] under explicit logistic structural equations"
+    sensitive_attributes: ["Complexity_Tier"]
+    sensitive_origin: "SYNTHETIC"
+    feature_timing_contract: "PRE_DISPATCH_VALID: Clean synthetic route features generated prior to dispatch."
+    expected_grouping_key: "station_cluster"
+    expected_temporal_key: "dispatch_hour"
+    redistribution_status: "UNRESTRICTED_OPEN_SOURCE"
+    verified_licensing: true
+    notes: "Controlled mathematical data-generating process used for algorithmic verification."

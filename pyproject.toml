@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "algorithmic-fairness-analysis"
+version = "1.0.0rc1"
+description = "An auditable fairness evaluation, mitigation, and verification framework for machine learning decision systems."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Varada Govind Aakula" }
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.10.0",
+    "xgboost>=1.7.0",
+    "fairlearn>=0.9.0",
+    "shap>=0.42.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+afa = "src.cli:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra -q"

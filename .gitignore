@@ -2,15 +2,51 @@
 .venv/
 venv/
 run_env/
+env/
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+*.key
+*.token
 
 # IDEs and Editors
 .vscode/
+.idea/
 .specstory/
+*.swp
+*.swo
 
-# Data
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Operational and Tabular Data Files
 data/
 *.csv
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.h5
+*.hdf5
+*.sqlite
+*.sqlite3
+*.db
 
-# Python
+# Python Builds and Caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Runtime Audit Bundles, Results, and Logs
+audit_result*.json
+audit_bundle_output/
+*.log
+release_bundle/

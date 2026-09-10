@@ -1,6 +1,5 @@
 # ============================================================================
 # REFERENCE LIBRARY CROSS-CHECK TEST SUITE & REPORT GENERATOR
-# Phase 3 Commercial-Readiness Upgrade
 # Compares internal metric results against external reference implementations
 # (Fairlearn and scikit-learn), asserts numerical tolerance, and generates
 # a machine-readable cross-check report (docs/reference_library_cross_check.json).

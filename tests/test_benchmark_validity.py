@@ -1,6 +1,6 @@
 # ============================================================================
 # Unit Tests: Benchmark Validity, Anti-Degeneracy Guardrails, & Controlled Scenarios
-# Covers Phase 16 specifications for Pass 3 Commercial-Readiness Upgrade.
+# Validates scenario generator, negative controls, calibration, and anti-degeneracy.
 # ============================================================================
 
 import math

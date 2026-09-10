@@ -1,6 +1,5 @@
 # ============================================================================
 # INDEPENDENT METRIC ORACLE VALIDATION TEST SUITE
-# Phase 2 Commercial-Readiness Upgrade
 # Validates core internal metric calculations against hand-derived arithmetic
 # constants and simple independent formulas without calling internal metric helpers.
 # ============================================================================

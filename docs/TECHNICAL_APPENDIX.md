@@ -1,6 +1,6 @@
 # Final Evaluation Results and Research Appendix
 
-_Generated on 2026-09-07 23:40:40_
+_Generated on 2026-09-10 19:08:27_
 
 ## What this report adds
 - Reweighting-based fairness intervention
@@ -45,7 +45,7 @@ In observational logistics and algorithmic dispatch settings, proxy attributes c
 | Random Forest | 0.8400 | 0.5063 | 0.0287 | 0.0581 | 0.9895 |
 | Neural Network | 0.8000 | 0.4825 | 0.0220 | 0.0526 | 0.9942 |
 | Weighted XGB | 0.8300 | 0.5004 | 0.0267 | 0.0601 | 0.9985 |
-| Equalized Odds ThresholdOptimizer | 0.8400 | 0.5190 | 0.0379 | 0.0575 | 0.9783 |
+| Equalized Odds ThresholdOptimizer | 0.8400 | 0.5126 | 0.0227 | 0.0535 | 0.9889 |
 
 ### Best model (Selected via Validation Set): Reweighted Logistic
 - User utility score (alpha=0.25): 0.4966

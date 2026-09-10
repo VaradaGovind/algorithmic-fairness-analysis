@@ -1,5 +1,5 @@
 # ============================================================================
-# Immutable Evaluation Manifest & Deterministic Fingerprint Engine (Pass 6)
+# Evaluation Manifest & Deterministic Fingerprint Engine
 # Cryptographically verifiable metadata contract binding evaluation results
 # to code versions, feature contracts, split parameters, and administrative policies.
 # ============================================================================
@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 
 
 class ResultClassification(str, Enum):
-    # Standard Pass 7 Evidence Taxonomy
+    # Standard Evidence Taxonomy
     INTERNAL_ENGINEERING_VERIFICATION = "INTERNAL_ENGINEERING_VERIFICATION"
     SYNTHETIC_DGP_VALIDATION = "SYNTHETIC_DGP_VALIDATION"
     INDEPENDENT_ORACLE_VALIDATION = "INDEPENDENT_ORACLE_VALIDATION"

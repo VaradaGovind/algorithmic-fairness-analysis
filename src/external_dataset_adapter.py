@@ -1,7 +1,7 @@
 # ============================================================================
-# External Real-Data Validation Adapter & Black-Box Isolation Boundary (Pass 6)
-# Enforces strict isolation: zero dependency on synthetic scenarios, DGP coefficients,
-# or ground-truth simulated labels. Treats the evaluator as a pure black-box consumer.
+# External Data Ingestion Adapter & Black-Box Interface
+# Extensible data ingestion interface: supports loading external operational
+# or benchmark datasets and evaluating them with clean isolation boundaries.
 # ============================================================================
 
 from __future__ import annotations

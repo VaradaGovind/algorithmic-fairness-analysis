@@ -162,7 +162,7 @@ PROVENANCE_REGISTRY: Dict[str, DatasetProvenance] = {
         dataset_name="Synthetic Controlled Benchmark",
         dataset_type=DatasetType.SYNTHETIC_DATA,
         source_reference="Algorithmic Fairness Analysis Framework / Controlled Logistics DGP",
-        version_or_date="Pass 4 (2026)",
+        version_or_date="2026",
         license_notes="MIT License (Open Source)",
         target_definition="Task_Success = [sigmoid(z) >= 0.50] under explicit logistic structural equations",
         sensitive_attributes=["Complexity_Tier"],

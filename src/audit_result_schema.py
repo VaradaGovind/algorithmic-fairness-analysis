@@ -1,6 +1,7 @@
 # ============================================================================
-# Product-Grade Audit Result Schema Engine (Pass 8)
-# Machine-readable schema, typing contracts, canonical serialization,
+# Audit Result Schema & Verification Engine
+# Structured evaluation result schema defining model performance,
+# typing contracts, canonical serialization,
 # and deterministic cryptographic fingerprinting for compliance audits.
 # ============================================================================
 

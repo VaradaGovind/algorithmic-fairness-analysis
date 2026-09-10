@@ -2,7 +2,7 @@
 # Audit Result Schema & Verification Engine
 # Structured evaluation result schema defining model performance,
 # typing contracts, canonical serialization,
-# and deterministic cryptographic fingerprinting for compliance audits.
+# and deterministic cryptographic fingerprinting for fairness evaluation results.
 # ============================================================================
 
 from __future__ import annotations

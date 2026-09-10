@@ -48,8 +48,9 @@ __pycache__/
 build/
 dist/
 
-# Runtime Audit Bundles, Results, and Logs
+# Runtime Results and Logs
 audit_result*.json
 audit_bundle_output/
 *.log
 release_bundle/
+docs/demo_evaluation_report.md

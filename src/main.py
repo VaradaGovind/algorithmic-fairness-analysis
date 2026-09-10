@@ -11,7 +11,7 @@ import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import matplotlib
 matplotlib.use("Agg")
@@ -785,13 +785,13 @@ def run_multi_seed_evaluation(bundles: List[base.DatasetBundle], seeds: Sequence
     return pd.DataFrame(summary_rows)
 
 
-def main() -> None:
+def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Algorithmic Fairness Analysis Pipeline")
     parser.add_argument("--seeds", type=str, default="42", help="Comma-separated random seeds (e.g. '42,43,44')")
     parser.add_argument("--demo", action="store_true", help="Run in self-contained synthetic demonstration mode")
     parser.add_argument("--audit", action="store_true", help="Run evaluation integrity and sensitive attribute audits")
     parser.add_argument("--alpha", type=float, default=0.25, help="User-defined utility scalarization parameter")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=UserWarning)
@@ -861,12 +861,12 @@ def main() -> None:
         short_name = name_map.get(study.bundle.name, study.bundle.name.lower().replace(" ", "_"))
         plot_pareto(study.results, PLOTS_DIR / f"{short_name}_pareto.png", f"Evaluation Pareto Frontier - {study.bundle.name}")
 
-    write_report(studies, DOCS_DIR / "technical_appendix.md")
-    causal_graph_markdown(DOCS_DIR / "causal_graph.md")
+    demo_report = DOCS_DIR / "demo_evaluation_report.md"
+    write_report(studies, demo_report)
 
     print("\n" + "=" * 76)
     print("PIPELINE EXECUTION COMPLETE")
-    print(f"Report: {DOCS_DIR / 'technical_appendix.md'}")
+    print(f"Report: {demo_report}")
     print(f"Metrics: {summary_path}")
     print("=" * 76 + "\n")
 

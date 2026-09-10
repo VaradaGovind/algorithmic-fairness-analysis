@@ -1076,7 +1076,7 @@ def compare_sample_to_population_truth(
 # Main CLI
 # ============================================================================
 
-def main() -> None:
+def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Canonical Fairness Benchmark Runner (Educational Multi-Seed Benchmark)")
     parser.add_argument("--demo", action="store_true", help="Execute canonical benchmark on controlled synthetic demo dataset")
     parser.add_argument("--scenario", type=str, default="SCENARIO_C_EXPLICIT_GROUP_EFFECT", help="Synthetic fairness scenario")
@@ -1084,7 +1084,7 @@ def main() -> None:
     parser.add_argument("--seeds", type=str, default="42,43,44,45,46", help="Comma-separated deterministic seeds")
     parser.add_argument("--alpha", type=float, default=0.25, help="User-defined utility scalarization parameter")
     parser.add_argument("--report", action="store_true", default=True, help="Generate canonical benchmark summary CSV and markdown report")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=UserWarning)

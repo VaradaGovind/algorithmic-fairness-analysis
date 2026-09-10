@@ -2466,7 +2466,7 @@ def evaluate_policy_compliance(
             reason_codes.append("DIR_UNSTABLE_RATIO")
 
     if not policy.policy_version or str(policy.policy_version).strip() in ("", "None"):
-        msg = "Policy version must be explicitly identified for audit certification."
+        msg = "Policy version must be explicitly identified for policy evaluation."
         abstentions.append(msg)
         missing_evidence_conditions.append(msg)
         reason_codes.append("GATE_UNIDENTIFIED_POLICY_VERSION")
@@ -2474,7 +2474,7 @@ def evaluate_policy_compliance(
     if suite.statistical_estimand:
         est_stat = suite.statistical_estimand.get("estimand_status") if isinstance(suite.statistical_estimand, dict) else getattr(suite.statistical_estimand, "estimand_status", "")
         if est_stat == "ESTIMAND_UNSPECIFIED":
-            msg = "Evaluation estimand is marked ESTIMAND_UNSPECIFIED. Policy certification blocked."
+            msg = "Evaluation estimand is marked ESTIMAND_UNSPECIFIED. Policy evaluation blocked."
             abstentions.append(msg)
             missing_evidence_conditions.append(msg)
             reason_codes.append("GATE_ESTIMAND_UNSPECIFIED")

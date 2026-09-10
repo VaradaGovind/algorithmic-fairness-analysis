@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-message: "If you use this software in your research or evaluation workflows, please cite it as below."
+message: "If you use this software in your educational work or research, please cite it as below."
 authors:
   - family-names: "Aakula"
     given-names: "Varada Govind"
-title: "Algorithmic Fairness Analysis: Auditable Evaluation and Governance Framework"
-version: 1.0.0-rc1
-date-released: 2026-09-09
+title: "Algorithmic Fairness Analysis: Educational Framework for Machine Learning Fairness and Bias Evaluation"
+version: 0.1.0
+date-released: 2026-09-10
 url: "https://github.com/VaradaGovind/algorithmic-fairness-analysis"
 license: "MIT"
-abstract: "An audit-grade, reproducible fairness evaluation, mitigation, and verification engine for machine learning decision systems, enforcing prediction-time contracts, decoupled governance status, and independent audit bundle verification."
+abstract: "An educational open-source framework demonstrating algorithmic fairness analysis, machine learning evaluation, causal analysis, bias detection, and fairness mitigation techniques."

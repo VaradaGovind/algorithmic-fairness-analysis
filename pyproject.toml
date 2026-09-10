@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "algorithmic-fairness-analysis"
-version = "1.0.0rc1"
-description = "An auditable fairness evaluation, mitigation, and verification framework for machine learning decision systems."
+version = "0.1.0"
+description = "An educational framework for studying fairness in machine-learning systems using statistical fairness metrics, causal analysis, model evaluation, and mitigation techniques."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

@@ -1,5 +1,5 @@
 # ============================================================================
-# Canonical Benchmark Execution Engine (Pass 3 Hardened)
+# Canonical Benchmark Execution Engine
 # Enforces prediction-time feature contracts, group-aware splitting,
 # model-selection firewall, majority-class baseline (B0), fair baseline hierarchy
 # (B0-B4), prediction collapse detection, and multi-seed variance.
@@ -392,7 +392,7 @@ def load_clean_amazon(data_dir: Path = DATA_DIR) -> Dict[str, Any]:
 
 
 # ============================================================================
-# Controlled Synthetic Benchmark Generator (Pass 3 Hardened)
+# Controlled Synthetic Benchmark Generator
 # ============================================================================
 
 def generate_controlled_synthetic_benchmark(
@@ -436,7 +436,7 @@ def generate_controlled_synthetic_benchmark(
     x3 = (stops_count - 22.5) / 10.0
     x4 = (vehicle_capacity - 300.0) / 115.0
 
-    # Scenario E: Constant Predictor / Zero Signal (Pass 2 Bug Replica for Negative Testing)
+    # Scenario E: Constant Predictor / Zero Signal (Negative Control)
     if scenario == "SCENARIO_E_CONSTANT_PREDICTOR" or signal_regime == "ZERO_SIGNAL":
         z = rng.normal(0.0, 1.0, n_samples)
         threshold = np.quantile(z, 0.106)  # 89.4% positive class, 0 mutual info with X
@@ -1077,7 +1077,7 @@ def compare_sample_to_population_truth(
 # ============================================================================
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Canonical Fairness Benchmark Runner (Pass 3 Hardened)")
+    parser = argparse.ArgumentParser(description="Canonical Fairness Benchmark Runner (Educational Multi-Seed Benchmark)")
     parser.add_argument("--demo", action="store_true", help="Execute canonical benchmark on controlled synthetic demo dataset")
     parser.add_argument("--scenario", type=str, default="SCENARIO_C_EXPLICIT_GROUP_EFFECT", help="Synthetic fairness scenario")
     parser.add_argument("--signal", type=str, default="MODERATE_SIGNAL", help="Signal regime (LOW_SIGNAL, MODERATE_SIGNAL, HIGH_SIGNAL, ZERO_SIGNAL)")
@@ -1093,7 +1093,7 @@ def main() -> None:
     seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
 
     print("\n" + "=" * 78)
-    print("CANONICAL FAIRNESS BENCHMARK EXECUTION (PASS 3 HARDENED)")
+    print("CANONICAL FAIRNESS BENCHMARK EXECUTION")
     print(f"Seeds: {seeds} | Demo Mode: {args.demo} | Scenario: {args.scenario} | Signal: {args.signal}")
     print("=" * 78)
 

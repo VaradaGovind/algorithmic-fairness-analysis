@@ -801,7 +801,7 @@ def main() -> None:
     seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
 
     print("\n" + "=" * 76)
-    print("ALGORITHMIC FAIRNESS ANALYSIS: COMMERCIAL-READINESS PASS 1 PIPELINE")
+    print("ALGORITHMIC FAIRNESS ANALYSIS: EDUCATIONAL PIPELINE")
     print(f"Seeds: {seeds} | Demo Mode: {args.demo} | Audit Flag: {args.audit}")
     print("=" * 76)
 

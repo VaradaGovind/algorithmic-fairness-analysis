@@ -1,5 +1,5 @@
 # ============================================================================
-# Defensive Fairness Evaluator & Clean Split Hierarchy (Pass 5)
+# Defensive Fairness Evaluator & Clean Split Hierarchy
 # Independently recomputes fairness metrics directly from predictions,
 # enforces robust edge-case handling (empty/tiny groups, zero pos/neg),
 # refactors composite score and welfare loss proxies, supports multi-attribute

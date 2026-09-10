@@ -1,5 +1,5 @@
 # ============================================================================
-# Declarative Evaluation Unit & Estimand Contracts (Pass 9 Release-Candidate)
+# Declarative Evaluation Unit & Estimand Contracts
 # Formally establishes the natural statistical / business decision unit
 # and evaluation estimand for each supported dataset, explicitly distinguishing:
 #   1. OBSERVATIONAL RECORD (raw data row: waypoint segment, survey record, manifest)
@@ -150,7 +150,7 @@ evaluation_units:
       statistical_estimand: "Trip-weighted equalized odds under binary cutoff deadline"
     historical_unit_mismatch:
       historical_evaluated_unit: "SEGMENT_LEVEL"
-      mismatch_description: "Pass 1-7 canonical benchmarks evaluated rows (waypoint segments) rather than trips, weighting multi-segment trips more heavily than single-segment trips."
+      mismatch_description: "Early canonical benchmarks evaluated rows (waypoint segments) rather than trips, weighting multi-segment trips more heavily than single-segment trips."
       preservation_policy: "Historical row-level numbers preserved under SEGMENT_LEVEL_UNAGGREGATED configuration; new benchmarks evaluate TRIP_LEVEL."
       comparison_validity: "LEGACY_NONCOMPARABLE"
 

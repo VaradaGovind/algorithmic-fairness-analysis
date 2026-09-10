@@ -111,7 +111,7 @@ class ExternalDatasetAdapter:
     def get_external_validation_status(self) -> Dict[str, Any]:
         """
         Returns machine-readable status indicating external operational data validation state.
-        Remains strictly 'EXTERNAL_VALIDATION_PENDING' until authentic operational customer data
+        Remains strictly 'EXTERNAL_VALIDATION_PENDING' until external operational data
         is staged and evaluated.
         """
         return {
@@ -119,7 +119,7 @@ class ExternalDatasetAdapter:
             "status": "EXTERNAL_VALIDATION_PENDING",
             "operational_data_staged": False,
             "execution_classification": "EXTERNAL_REAL_DATA_VALIDATION",
-            "notes": "Authentic operational data staging pending client authorization and governance sign-off.",
+            "notes": "External operational data staging pending user configuration.",
         }
 
     def ingest_external_tabular(

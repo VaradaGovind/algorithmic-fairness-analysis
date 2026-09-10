@@ -444,7 +444,7 @@ def validate_audit_result_dict(
     validate_invariants: bool = True,
 ) -> Tuple[bool, List[str]]:
     """
-    Validates an audit result dictionary against configs/audit_result_schema.yaml.
+    Validates an audit result dictionary structure, typing contracts, and semantic constraints.
     Performs comprehensive structural, typing, and contractual constraint checks.
     
     Returns:

@@ -10,7 +10,7 @@
 # ============================================================================
 
 version: "2.0.0"
-governance_standard: "PASS_9_RELEASE_CANDIDATE"
+governance_standard: "STANDARD_EVALUATION_CONTRACT"
 
 # Explicit separation of foundational evaluation concepts
 conceptual_definitions:
